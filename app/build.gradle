@@ -34,10 +34,16 @@ java {
 
 application {
     // Define the main class for the application.
-    mainClass = 'se.tetris.team3.App'
+    mainClass = 'se.tetris.team3.Tetris'
 }
+
+
 
 tasks.named('test') {
     // Use JUnit Platform for unit tests.
     useJUnitPlatform()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
 }
