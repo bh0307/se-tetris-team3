@@ -1,6 +1,9 @@
 package se.tetris.team3.ui;
 
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,23 +23,21 @@ public class MenuScreen implements Screen {
     private int idx = 0;
 
     // MenuScreen 객체가 처음 만들어질 때 초기 상태를 세팅한 것
-    public MenuScreen(AppFrame app) {
-        this.app = app;
+   public MenuScreen(AppFrame app) {
+    this.app = app;
 
-        // itmes.add => 메뉴 항목을 리스트에 등록
-        items.add(new MenuItem("게임 시작", () -> {
-            // TODO: GameScreen 연결 (다음 팀/단계)
-        }));
-        items.add(new MenuItem("설정", () -> {
-            // 아직 PR3에서 구현 예정
-            System.out.println("[설정] 화면은 다음 PR에서 추가됩니다.");
-        }));
-        items.add(new MenuItem("스코어보드", () -> {
-            // TODO: 추후 구현
-            System.out.println("[스코어보드] 화면은 추후 추가됩니다.");
-        }));
-        items.add(new MenuItem("종료", () -> System.exit(0)));
-    }
+    items.add(new MenuItem("게임 시작", () -> {
+        app.showScreen(new GameScreen(app));  // GameScreen으로 전환
+    }));
+    items.add(new MenuItem("설정", () -> {
+        System.out.println("[설정] 화면은 다음 PR에서 추가됩니다.");
+    }));
+    items.add(new MenuItem("스코어보드", () -> {
+        System.out.println("[스코어보드] 화면은 추후 추가됩니다.");
+    }));
+    items.add(new MenuItem("종료", () -> System.exit(0)));
+}
+
 
     // 매 프레임 화면을 그리는 함수. repaint() 이후 Swing이 호출함
     @Override public void render(Graphics2D g2) {

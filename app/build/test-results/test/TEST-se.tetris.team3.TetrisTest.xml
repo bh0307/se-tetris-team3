@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="se.tetris.team3.TetrisTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2025-09-30T09:53:49" hostname="LAPTOP-SHKCV0D5" time="0.25">
-  <properties/>
-  <testcase name="appFrameSmokeTest_headlessSafe()" classname="se.tetris.team3.TetrisTest" time="0.25"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

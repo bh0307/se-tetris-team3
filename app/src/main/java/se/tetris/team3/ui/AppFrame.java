@@ -1,10 +1,12 @@
 // 메인 윈도우 + 화면 전환기
 package se.tetris.team3.ui;
 
-import javax.swing.*;
-import java.awt.*;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+
+import javax.swing.JFrame;
 
 public class AppFrame extends JFrame {
     private Screen current;
