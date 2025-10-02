@@ -8,11 +8,15 @@ import java.awt.event.ActionListener;
 
 import se.tetris.team3.blocks.Block;
 
+import se.tetris.team3.core.Settings;
+
 public class GameScreen implements Screen {
 
     private final AppFrame app;
     private final GameManager manager;
     private Timer timer;
+    private int blockSize;
+    private final Settings settings;
 
     private int gameOverSelection = 0; // 0: 다시하기, 1: 나가기
     private final String[] gameOverOptions = {"다시하기", "나가기"};
@@ -21,6 +25,8 @@ public class GameScreen implements Screen {
     public GameScreen(AppFrame app) {
         this.app = app;
         this.manager = new GameManager();
+        this.settings = app.getSettings();  
+        this.blockSize = settings.resolveBlockSize();
     }
 
     @Override
@@ -49,7 +55,7 @@ public class GameScreen implements Screen {
         g2.setColor(Color.BLACK);
         g2.fillRect(0, 0, app.getWidth(), app.getHeight());
 
-        int blockSize = 30;
+        int blockSize = this.blockSize;
 
         // 고정된 블록 그리기
         g2.setColor(Color.GRAY);
@@ -104,6 +110,8 @@ public class GameScreen implements Screen {
 
     @Override
     public void onKeyPressed(KeyEvent e) {
+        var km = settings.getKeymap();
+
         if (manager.isGameOver()) {
             switch (e.getKeyCode()) {
                 case KeyEvent.VK_UP, KeyEvent.VK_DOWN -> gameOverSelection = 1 - gameOverSelection;
