@@ -23,7 +23,7 @@ public class MenuScreen implements Screen {
     private int idx = 0;
 
     // MenuScreen 객체가 처음 만들어질 때 초기 상태를 세팅한 것
-   public MenuScreen(AppFrame app) {
+    public MenuScreen(AppFrame app) {
     this.app = app;
 
     items.add(new MenuItem("게임 시작", () -> {
