@@ -1,18 +1,26 @@
 // 메인 윈도우 + 화면 전환기
 package se.tetris.team3.ui;
 
+import se.tetris.team3.core.Settings;
+import se.tetris.team3.store.SettingsStore;
+
 import javax.swing.*;
-import java.awt.*;
+import java.awt.*; 
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 
+
 public class AppFrame extends JFrame {
+    private final Settings settings = new Settings();
     private Screen current;
 
     public AppFrame() {
+        SettingsStore.load(settings);
+
         setTitle("TETRIS");
+        Dimension win = settings.resolveWindowSize();
+        setSize(win.width, win.height);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
-        setSize(480, 720);
         setLocationRelativeTo(null);
         setResizable(false);
 
@@ -25,6 +33,10 @@ public class AppFrame extends JFrame {
         });
 
         showScreen(new MenuScreen(this));
+    }
+
+    public Settings getSettings() {
+        return settings;
     }
 
     // 이전 화면 onHide() -> 새 화면 대입 -> 새 화면 onShow() -> repaint()
