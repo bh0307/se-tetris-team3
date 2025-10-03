@@ -29,3 +29,6 @@ replay_pid*
 .gradle/
 build/
 app/build/
+
+# Score data file
+app/src/main/java/se/tetris/team3/ui/score/scoreFile.txt
