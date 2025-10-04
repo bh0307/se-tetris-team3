@@ -116,4 +116,15 @@ public class ScoreManager {
             System.err.println("Cannot save scores: " + e.getMessage());
         }
     }
+
+    // Settings에서 호출될 스코어 초기화
+    public void clearScores() {
+        highScores.clear();
+        try (PrintWriter writer = new PrintWriter(new FileWriter(SCORE_FILE))) {
+            // 빈 파일로 덮어쓰기
+        } catch (IOException e) {
+            System.err.println("Cannot clear scores: " + e.getMessage());
+        }
+        System.out.println("[ScoreManager] All scores cleared.");
+    }
 }
