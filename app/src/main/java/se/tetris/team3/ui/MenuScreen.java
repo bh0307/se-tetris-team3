@@ -8,15 +8,11 @@ import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.List;
 
+import se.tetris.team3.ui.score.ScoreManager;
+import se.tetris.team3.ui.score.ScoreboardScreen;
+
 public class MenuScreen implements Screen {
     private final AppFrame app;
-
-    private static class MenuItem {
-        String label; Runnable action;
-        
-        // MenuItem을 리스트로 관리 => 새 항목 추가가 쉬움
-        MenuItem(String l, Runnable a) { label = l; action = a; }
-    }
     private final List<MenuItem> items = new ArrayList<>();
     
     // idx로 현재 선택 인덱스 추적
@@ -33,7 +29,7 @@ public class MenuScreen implements Screen {
         System.out.println("[설정] 화면은 다음 PR에서 추가됩니다.");
     }));
     items.add(new MenuItem("스코어보드", () -> {
-        System.out.println("[스코어보드] 화면은 추후 추가됩니다.");
+            app.showScreen(new ScoreboardScreen(app,-1, new ScoreManager()));    
     }));
     items.add(new MenuItem("종료", () -> System.exit(0)));
 }
@@ -60,7 +56,7 @@ public class MenuScreen implements Screen {
         g2.setFont(new Font("SansSerif", Font.PLAIN, 22));
         int y = 220;
         for (int i=0;i<items.size();i++){
-            String t = (i==idx?"> ":"  ") + items.get(i).label;
+            String t = (i==idx?"> ":"  ") + items.get(i).getLabel();
             if (i==idx) g2.setColor(new Color(120,200,255));
             else g2.setColor(Color.LIGHT_GRAY);
             g2.drawString(t, (w - g2.getFontMetrics().stringWidth(t))/2, y);
@@ -81,7 +77,7 @@ public class MenuScreen implements Screen {
             case KeyEvent.VK_DOWN -> idx = (idx + 1) % items.size();
             
             // 현재 항목의 action.run() 실행
-            case KeyEvent.VK_ENTER -> items.get(idx).action.run();
+            case KeyEvent.VK_ENTER -> items.get(idx).getAction().run();
             
             // System.exit(0) 종료
             case KeyEvent.VK_ESCAPE -> System.exit(0);

@@ -24,4 +24,11 @@
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+
+# Gradle
 .gradle/
+build/
+app/build/
+
+# Score data file
+app/src/main/java/se/tetris/team3/ui/score/scoreFile.txt
