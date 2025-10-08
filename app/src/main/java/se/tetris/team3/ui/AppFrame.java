@@ -5,16 +5,16 @@ import se.tetris.team3.core.Settings;
 import se.tetris.team3.store.SettingsStore;
 
 import javax.swing.*;
-import java.awt.*; 
+import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-
 
 public class AppFrame extends JFrame {
     private final Settings settings = new Settings();
     private Screen current;
 
     public AppFrame() {
+        // 설정 로드
         SettingsStore.load(settings);
 
         setTitle("TETRIS");
@@ -24,7 +24,7 @@ public class AppFrame extends JFrame {
         setLocationRelativeTo(null);
         setResizable(false);
 
-        // keyPressed 발생 시 current.onKeyPressed(e) 호출
+        // 키 입력을 현재 화면으로 전달
         addKeyListener(new KeyAdapter() {
             @Override public void keyPressed(KeyEvent e) {
                 if (current != null) current.onKeyPressed(e);
@@ -32,6 +32,7 @@ public class AppFrame extends JFrame {
             }
         });
 
+        // 첫 화면: 메뉴
         showScreen(new MenuScreen(this));
     }
 
@@ -39,17 +40,15 @@ public class AppFrame extends JFrame {
         return settings;
     }
 
-    // 이전 화면 onHide() -> 새 화면 대입 -> 새 화면 onShow() -> repaint()
+    // 이전 화면 onHide() -> 새 화면 설정 -> 새 화면 onShow() -> 다시 그리기
     public void showScreen(Screen next) {
         if (current != null) current.onHide();
         current = next;
         current.onShow();
-
-        // Swing 내부에 "이 영역을 다시 그려야 한다"는 이벤트를 등록
-        repaint();
+        repaint(); // 새 화면을 그리도록 요청
     }
 
-    // 오버라이드 -> current.render() 호출해서 화면을 그리게 함
+    // 현재 Screen의 render()로 위임
     @Override public void paint(Graphics g) {
         super.paint(g);
         if (current != null) current.render((Graphics2D) g);

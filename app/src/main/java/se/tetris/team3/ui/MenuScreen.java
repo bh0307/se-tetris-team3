@@ -14,75 +14,68 @@ import se.tetris.team3.ui.score.ScoreboardScreen;
 public class MenuScreen implements Screen {
     private final AppFrame app;
     private final List<MenuItem> items = new ArrayList<>();
-    
-    // idx로 현재 선택 인덱스 추적
-    private int idx = 0;
+    private int idx = 0; // 현재 선택 인덱스
 
-    // MenuScreen 객체가 처음 만들어질 때 초기 상태를 세팅한 것
     public MenuScreen(AppFrame app) {
-    this.app = app;
+        this.app = app;
 
-    items.add(new MenuItem("게임 시작", () -> {
-        app.showScreen(new GameScreen(app));  // GameScreen으로 전환
-    }));
-    items.add(new MenuItem("설정", () -> {
-        System.out.println("[설정] 화면은 다음 PR에서 추가됩니다.");
-    }));
-    items.add(new MenuItem("스코어보드", () -> {
-            app.showScreen(new ScoreboardScreen(app,-1, new ScoreManager()));    
-    }));
-    items.add(new MenuItem("종료", () -> System.exit(0)));
-}
+        items.add(new MenuItem("게임 시작", () -> {
+            app.showScreen(new GameScreen(app));
+        }));
+        items.add(new MenuItem("설정", () -> {
+            app.showScreen(new SettingsScreen(app)); //SettingsScreen으로 실제 전환
+        }));
+        items.add(new MenuItem("스코어보드", () -> {
+            app.showScreen(new ScoreboardScreen(app, -1, new ScoreManager()));
+        }));
+        items.add(new MenuItem("종료", () -> System.exit(0)));
+    }
 
-
-    // 매 프레임 화면을 그리는 함수. repaint() 이후 Swing이 호출함
     @Override public void render(Graphics2D g2) {
-        // setRenderingHint => 텍스트 안티앨리어싱(부드럽게 표시)
-        g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-        
-        // 글씨 가로 중앙 배치하기위해서 프레임 너비 가져옴
+        g2.setRenderingHint(
+            RenderingHints.KEY_TEXT_ANTIALIASING,
+            RenderingHints.VALUE_TEXT_ANTIALIAS_ON
+        );
+
         int w = app.getWidth();
 
         // 배경
         g2.setColor(Color.BLACK);
         g2.fillRect(0, 0, app.getWidth(), app.getHeight());
 
+        // 타이틀
         g2.setColor(Color.WHITE);
         g2.setFont(new Font("SansSerif", Font.BOLD, 36));
         String title = "TETRIS";
-        g2.drawString(title, (w - g2.getFontMetrics().stringWidth(title))/2, 140);
+        g2.drawString(title, (w - g2.getFontMetrics().stringWidth(title)) / 2, 140);
 
-        // 제목 그리기
+        // 메뉴 항목
         g2.setFont(new Font("SansSerif", Font.PLAIN, 22));
         int y = 220;
-        for (int i=0;i<items.size();i++){
-            String t = (i==idx?"> ":"  ") + items.get(i).getLabel();
-            if (i==idx) g2.setColor(new Color(120,200,255));
-            else g2.setColor(Color.LIGHT_GRAY);
-            g2.drawString(t, (w - g2.getFontMetrics().stringWidth(t))/2, y);
+        for (int i = 0; i < items.size(); i++) {
+            String t = (i == idx ? "> " : "  ") + items.get(i).getLabel();
+            g2.setColor(i == idx ? new Color(120, 200, 255) : Color.LIGHT_GRAY);
+            g2.drawString(t, (w - g2.getFontMetrics().stringWidth(t)) / 2, y);
             y += 40;
         }
 
-        // 메뉴 항목 그리기
+        // 하단 힌트
         g2.setColor(Color.GRAY);
         g2.setFont(new Font("SansSerif", Font.PLAIN, 14));
-        String hint = "↑/↓ 이동   Enter 선택   Esc 종료   (설정은 다음 PR)";
-        g2.drawString(hint, (w - g2.getFontMetrics().stringWidth(hint))/2, app.getHeight()-60);
+        String hint = "↑/↓ 이동   Enter 선택   Esc 종료";
+        g2.drawString(hint, (w - g2.getFontMetrics().stringWidth(hint)) / 2, app.getHeight() - 60);
     }
 
     @Override public void onKeyPressed(KeyEvent e) {
-        switch (e.getKeyCode()){
-            // UP, DOWN => idx 변경(원형 이동)
+        switch (e.getKeyCode()) {
             case KeyEvent.VK_UP -> idx = (idx - 1 + items.size()) % items.size();
             case KeyEvent.VK_DOWN -> idx = (idx + 1) % items.size();
-            
-            // 현재 항목의 action.run() 실행
             case KeyEvent.VK_ENTER -> items.get(idx).getAction().run();
-            
-            // System.exit(0) 종료
             case KeyEvent.VK_ESCAPE -> System.exit(0);
         }
-        // 키 입력 후 다시 그리기
         app.repaint();
     }
+
+    @Override public void onShow() { /* 필요시 포커스 관련 처리 추가 가능 */ }
+    @Override public void onHide() { /* 필요시 리소스 정리 */ }
 }
