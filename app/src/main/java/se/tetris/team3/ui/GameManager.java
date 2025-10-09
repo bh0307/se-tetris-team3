@@ -18,16 +18,19 @@ public class GameManager {
 
     private int[][] field;
     private Block currentBlock;
+    private Block nextBlock;   // 다음 블록
     private int blockX, blockY;
     private boolean isGameOver;
-
+    private int score;
     private Random random;
 
     public GameManager() {
         field = new int[FIELD_HEIGHT][FIELD_WIDTH];
         random = new Random();
-        spawnNewBlock();
+        nextBlock = makeRandomBlock();   // NEXT 미리 준비
+        spawnNewBlock();                 // 현재 블록으로 옮기기
         isGameOver = false;
+        score = 0;
     }
 
     public int getFieldValue(int row, int col) {
@@ -36,6 +39,10 @@ public class GameManager {
 
     public Block getCurrentBlock() {
         return currentBlock;
+    }
+
+    public Block getNextBlock() {
+        return nextBlock;
     }
 
     public int getBlockX() {
@@ -50,21 +57,29 @@ public class GameManager {
         return isGameOver;
     }
 
-    public void spawnNewBlock() {
+    public int getScore() {
+        return score;
+    }
+
+    private Block makeRandomBlock() {
         int blockType = random.nextInt(7);
-        switch (blockType) {
-            case 0 -> currentBlock = new IBlock();
-            case 1 -> currentBlock = new JBlock();
-            case 2 -> currentBlock = new LBlock();
-            case 3 -> currentBlock = new OBlock();
-            case 4 -> currentBlock = new SBlock();
-            case 5 -> currentBlock = new TBlock();
-            case 6 -> currentBlock = new ZBlock();
-            default -> currentBlock = new IBlock();
-        }
+        return switch (blockType) {
+            case 0 -> new IBlock();
+            case 1 -> new JBlock();
+            case 2 -> new LBlock();
+            case 3 -> new OBlock();
+            case 4 -> new SBlock();
+            case 5 -> new TBlock();
+            case 6 -> new ZBlock();
+            default -> new IBlock();
+        };
+    }
+
+    public void spawnNewBlock() {
+        currentBlock = nextBlock;
+        nextBlock = makeRandomBlock();   // NEXT 갱신
         blockX = FIELD_WIDTH / 2 - currentBlock.width() / 2;
         blockY = 0;
-
         if (isCollision(blockX, blockY, currentBlock.getShape())) {
             isGameOver = true;
         }
@@ -119,6 +134,7 @@ public class GameManager {
     }
 
     public void clearLines() {
+        int linesCleared = 0;
         for (int i = FIELD_HEIGHT - 1; i >= 0; i--) {
             boolean fullLine = true;
             for (int j = 0; j < FIELD_WIDTH; j++) {
@@ -128,6 +144,7 @@ public class GameManager {
                 }
             }
             if (fullLine) {
+                linesCleared++;
                 for (int k = i; k > 0; k--) {
                     System.arraycopy(field[k - 1], 0, field[k], 0, FIELD_WIDTH);
                 }
@@ -137,6 +154,7 @@ public class GameManager {
                 i++;
             }
         }
+        if (linesCleared > 0) score += linesCleared * 100;
     }
 
     public void stepDownOrFix() {
@@ -150,6 +168,8 @@ public class GameManager {
     public void resetGame() {
         field = new int[FIELD_HEIGHT][FIELD_WIDTH];
         isGameOver = false;
+        score = 0;
+        nextBlock = makeRandomBlock();
         spawnNewBlock();
     }
 }

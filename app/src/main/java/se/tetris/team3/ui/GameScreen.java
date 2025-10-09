@@ -7,7 +7,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
 import se.tetris.team3.blocks.Block;
-
 import se.tetris.team3.core.Settings;
 
 public class GameScreen implements Screen {
@@ -18,14 +17,14 @@ public class GameScreen implements Screen {
     private int blockSize;
     private final Settings settings;
 
-    private int gameOverSelection = 0; // 0: 다시하기, 1: 나가기
+    private int gameOverSelection = 0;
     private final String[] gameOverOptions = {"다시하기", "나가기"};
     private Font gameOverOptionFont = new Font("SansSerif", Font.PLAIN, 24);
 
     public GameScreen(AppFrame app) {
         this.app = app;
         this.manager = new GameManager();
-        this.settings = app.getSettings();  
+        this.settings = app.getSettings();
         this.blockSize = settings.resolveBlockSize();
     }
 
@@ -56,15 +55,16 @@ public class GameScreen implements Screen {
         g2.fillRect(0, 0, app.getWidth(), app.getHeight());
 
         int blockSize = this.blockSize;
+        int padding = 20;
 
         // 고정된 블록 그리기
         g2.setColor(Color.GRAY);
         for (int i = 0; i < 20; i++) {
             for (int j = 0; j < 10; j++) {
                 if (manager.getFieldValue(i, j) == 1) {
-                    g2.fillRect(j * blockSize, i * blockSize, blockSize, blockSize);
+                    g2.fillRect(padding + j * blockSize, padding + i * blockSize, blockSize, blockSize);
                     g2.setColor(Color.BLACK);
-                    g2.drawRect(j * blockSize, i * blockSize, blockSize, blockSize);
+                    g2.drawRect(padding + j * blockSize, padding + i * blockSize, blockSize, blockSize);
                     g2.setColor(Color.GRAY);
                 }
             }
@@ -80,9 +80,9 @@ public class GameScreen implements Screen {
                     if (shape[i][j] == 1) {
                         int x = manager.getBlockX() + j;
                         int y = manager.getBlockY() + i;
-                        g2.fillRect(x * blockSize, y * blockSize, blockSize, blockSize);
+                        g2.fillRect(padding + x * blockSize, padding + y * blockSize, blockSize, blockSize);
                         g2.setColor(Color.BLACK);
-                        g2.drawRect(x * blockSize, y * blockSize, blockSize, blockSize);
+                        g2.drawRect(padding + x * blockSize, padding + y * blockSize, blockSize, blockSize);
                         g2.setColor(currentBlock.getColor());
                     }
                 }
@@ -96,7 +96,6 @@ public class GameScreen implements Screen {
             int y = app.getHeight() / 2 - 50;
             g2.drawString(msg, x, y);
 
-
             g2.setFont(gameOverOptionFont);
             for (int i = 0; i < gameOverOptions.length; i++) {
                 String text = (i == gameOverSelection ? "> " : "  ") + gameOverOptions[i];
@@ -104,6 +103,44 @@ public class GameScreen implements Screen {
                 int optionY = y + 50 + i * 30;
                 g2.setColor(i == gameOverSelection ? Color.YELLOW : Color.LIGHT_GRAY);
                 g2.drawString(text, optionX, optionY);
+            }
+        }
+
+        // 필드 테두리(틀) 그리기
+        g2.setColor(Color.WHITE);
+        g2.setStroke(new BasicStroke(3));
+        g2.drawRect(padding, padding, blockSize * 10, blockSize * 20);
+        g2.setStroke(new BasicStroke(1));
+
+        // 점수 표시 (필드 안쪽 우상단)
+        g2.setColor(Color.WHITE);
+        g2.setFont(new Font("SansSerif", Font.BOLD, 20));
+        String scoreText = "Score: " + manager.getScore();
+        int scoreX = padding + blockSize * 10 - 10 - g2.getFontMetrics().stringWidth(scoreText);
+        int scoreY = padding + 30;
+        g2.drawString(scoreText, scoreX, scoreY);
+
+        // ===== 네트 블록 미리보기 영역 =====
+        int previewX = padding + blockSize * 10 + 40;
+        int previewY = padding + 80;
+        g2.setColor(Color.WHITE);
+        g2.setFont(new Font("SansSerif", Font.BOLD, 18));
+        g2.drawString("Next", previewX, previewY - 25);
+        Block nextBlock = manager.getNextBlock();
+        int[][] nextShape = nextBlock.getShape();
+        Color nextColor = nextBlock.getColor();
+        int previewBlockSize = blockSize * 2 / 3;
+        g2.setColor(nextColor);
+        for (int i = 0; i < nextShape.length; i++) {
+            for (int j = 0; j < nextShape[i].length; j++) {
+                if (nextShape[i][j] == 1) {
+                    int drawX = previewX + j * previewBlockSize;
+                    int drawY = previewY + i * previewBlockSize;
+                    g2.fillRect(drawX, drawY, previewBlockSize, previewBlockSize);
+                    g2.setColor(Color.BLACK);
+                    g2.drawRect(drawX, drawY, previewBlockSize, previewBlockSize);
+                    g2.setColor(nextColor);
+                }
             }
         }
     }
