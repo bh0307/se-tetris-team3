@@ -36,6 +36,7 @@ public class GameScreen implements Screen {
         this.app = app;
         this.manager = manager;
         this.settings = app.getSettings();
+        this.manager.attachSettings(app.getSettings());
     }
 
     @Override public void onShow() {

@@ -5,6 +5,9 @@ import java.awt.Font;
 import java.awt.Graphics2D;
 import java.util.Random;
 
+import se.tetris.team3.core.Settings;
+import se.tetris.team3.ui.PatternPainter; // PatternPainter를 GameManager에서 쓰려면 이것도
+
 import se.tetris.team3.blocks.Block;
 import se.tetris.team3.blocks.IBlock;
 import se.tetris.team3.blocks.JBlock;
@@ -27,6 +30,8 @@ public class GameManager {
     private int score;
     private Random random;
 
+    private Settings settings;
+
     public GameManager() {
         field = new int[FIELD_HEIGHT][FIELD_WIDTH];
         random = new Random();
@@ -34,6 +39,10 @@ public class GameManager {
         spawnNewBlock();                 // 현재 블록으로 옮기기
         isGameOver = false;
         score = 0;
+    }
+
+    public void attachSettings(Settings settings) {
+        this.settings = settings;
     }
 
     public int getFieldValue(int row, int col) {
@@ -198,15 +207,25 @@ public class GameManager {
             int previewX = padding + blockSize * 12;
             int previewY = padding + 70;
 
+            // ✅ 색맹모드 상태 읽기 (null 방어)
+            final boolean cb = (settings != null && settings.isColorBlindMode());
+
+            // 프리뷰는 약간 줄여서 표시
+            final int cell = Math.max(8, blockSize - 4);
+
             for (int r = 0; r < shape.length; r++) {
                 for (int c = 0; c < shape[r].length; c++) {
                     if (shape[r][c] != 0) {
                         int x = previewX + c * (blockSize - 4);
                         int y = previewY + r * (blockSize - 4);
+                        /*
                         g2.setColor(color);
                         g2.fillRect(x, y, blockSize - 4, blockSize - 4);
                         g2.setColor(Color.BLACK);
                         g2.drawRect(x, y, blockSize - 4, blockSize - 4);
+                        */
+                        // ✅ PatternPainter 사용 (블록 객체는 미리보기라 null)
+                        PatternPainter.drawCell(g2, x, y, cell, color, null, cb);
                     }
                 }
             }
