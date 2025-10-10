@@ -78,4 +78,5 @@ public class MenuScreen implements Screen {
 
     @Override public void onShow() { /* 필요시 포커스 관련 처리 추가 가능 */ }
     @Override public void onHide() { /* 필요시 리소스 정리 */ }
+    
 }

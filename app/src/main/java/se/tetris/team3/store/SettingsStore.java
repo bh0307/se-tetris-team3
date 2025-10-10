@@ -79,4 +79,53 @@ public class SettingsStore {
             System.err.println("[SettingsStore] resetScores failed: " + e.getMessage());
         }
     }
+
+    /*
+
+    어쩌다보니 GPT가 작성해줘서 일단은 놔둠
+
+    public static void loadSettings(Settings settings) {
+        // TODO: 파일에서 설정을 불러오는 로직 구현 예정
+        // 지금은 비워둬도 됨
+
+        // 예시 구현 (JSON 파싱 라이브러리 없이 간단히 구현)
+        // 나중에 프로그램 꺼도 색맹모드 유지하려면 이 부분 구현 필요
+
+        File file = new File(SETTINGS_FILE);
+        if (!file.exists()) return;
+
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))) {
+
+            String json = reader.readLine();
+            if (json != null && json.contains("\"colorBlindMode\":true")) {
+                settings.setColorBlindMode(true);
+            } else {
+                settings.setColorBlindMode(false);
+            }
+
+        } catch (IOException e) {
+            System.err.println("[SettingsStore] 설정 파일 로드 실패: " + e.getMessage());
+        }
+    }
+
+    public static void saveSettings(Settings settings) {
+        // TODO: 설정 저장 로직 구현 예정
+
+        // 예시 구현 (JSON 파싱 라이브러리 없이 간단히 구현)
+        // 나중에 프로그램 꺼도 색맹모드 유지하려면 이 부분 구현 필요
+
+        File file = new File(SETTINGS_FILE);
+        try (BufferedWriter writer = new BufferedWriter(
+                new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8))) {
+
+            String json = String.format("{\"colorBlindMode\":%s}", settings.isColorBlindMode());
+            writer.write(json);
+
+        } catch (IOException e) {
+            System.err.println("[SettingsStore] 설정 파일 저장 실패: " + e.getMessage());
+        }
+    }
+    */
+
 }
