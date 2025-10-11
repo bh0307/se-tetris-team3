@@ -12,6 +12,7 @@ import java.awt.event.KeyEvent;
 public class AppFrame extends JFrame {
     private final Settings settings = new Settings();
     private Screen current;
+    private BackBufferPanel canvas; // 서보성 추가
 
     public AppFrame() {
         // 설정 로드
@@ -25,12 +26,31 @@ public class AppFrame extends JFrame {
         setResizable(false);
 
         // 키 입력을 현재 화면으로 전달
+        /* (이거 지울듯)
         addKeyListener(new KeyAdapter() {
             @Override public void keyPressed(KeyEvent e) {
                 if (current != null) current.onKeyPressed(e);
                 repaint();
             }
         });
+        */
+        
+
+        // 서보성 추가 -------------
+        canvas = new BackBufferPanel(this);
+        setContentPane(canvas);
+        canvas.setFocusable(true);
+        canvas.requestFocusInWindow();
+
+        KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(ev -> {
+            if (ev.getID() == KeyEvent.KEY_PRESSED) {
+                if (current != null) current.onKeyPressed((KeyEvent) ev);
+                repaint();
+            }
+            return false; // 다른 컴포넌트도 키를 받을 수 있도록 소비하지 않음
+        });
+
+        //--------------------------
 
         // 첫 화면: 메뉴
         showScreen(new MenuScreen(this));
@@ -48,9 +68,54 @@ public class AppFrame extends JFrame {
         repaint(); // 새 화면을 그리도록 요청
     }
 
+    // 서보성 추가
+
+    /*
     // 현재 Screen의 render()로 위임
     @Override public void paint(Graphics g) {
         super.paint(g);
         if (current != null) current.render((Graphics2D) g);
+    }
+    */
+
+    /** 내부 백버퍼 패널: 깜빡임 방지 */
+    private static final class BackBufferPanel extends JPanel {
+        private final AppFrame app;
+        private Image back;
+
+        BackBufferPanel(AppFrame app) {
+            this.app = app;
+            setOpaque(true);
+            setBackground(Color.BLACK);
+            setDoubleBuffered(true);
+        }
+
+        private void ensureBack() {
+            int w = Math.max(1, getWidth()), h = Math.max(1, getHeight());
+            if (back == null || back.getWidth(null) != w || back.getHeight(null) != h) {
+                back = createImage(w, h);
+            }
+        }
+
+        @Override public void update(Graphics g) { paint(g); }
+
+        @Override protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            ensureBack();
+            Graphics2D g2 = (Graphics2D) back.getGraphics();
+            try {
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                // clear
+                g2.setColor(getBackground());
+                g2.fillRect(0, 0, getWidth(), getHeight());
+                // delegate render
+                Screen cur = app.current;
+                if (cur != null) cur.render(g2);
+            } finally {
+                g2.dispose();
+            }
+            g.drawImage(back, 0, 0, null);
+            Toolkit.getDefaultToolkit().sync(); // 일부 환경에서 티어링 감소
+        }
     }
 }
