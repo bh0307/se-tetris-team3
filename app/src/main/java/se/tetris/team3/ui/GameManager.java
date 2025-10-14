@@ -5,17 +5,15 @@ import java.awt.Font;
 import java.awt.Graphics2D;
 import java.util.Random;
 
-import se.tetris.team3.core.Settings;
-import se.tetris.team3.ui.PatternPainter; // PatternPainter를 GameManager에서 쓰려면 이것도
-
 import se.tetris.team3.blocks.Block;
-import se.tetris.team3.blocks.IBlock;
+import se.tetris.team3.blocks.IBlock; // PatternPainter를 GameManager에서 쓰려면 이것도
 import se.tetris.team3.blocks.JBlock;
 import se.tetris.team3.blocks.LBlock;
 import se.tetris.team3.blocks.OBlock;
 import se.tetris.team3.blocks.SBlock;
 import se.tetris.team3.blocks.TBlock;
 import se.tetris.team3.blocks.ZBlock;
+import se.tetris.team3.core.Settings;
 
 public class GameManager {
 
