@@ -32,3 +32,4 @@ app/build/
 
 # Score data file
 app/src/main/java/se/tetris/team3/ui/score/scoreFile.txt
+app/bin/main/se/tetris/team3/ui/score/scoreFile.txt
