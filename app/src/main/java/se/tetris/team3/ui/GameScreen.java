@@ -8,6 +8,7 @@ import java.awt.event.ActionListener;
 
 import se.tetris.team3.blocks.Block;
 import se.tetris.team3.core.Settings;
+import se.tetris.team3.ui.score.ScoreManager;
 
 public class GameScreen implements Screen {
 
@@ -16,10 +17,6 @@ public class GameScreen implements Screen {
     private final GameManager manager;
     private Timer timer;
     private int blockSize;
-
-    private int gameOverSelection = 0;
-    private final String[] gameOverOptions = {"다시하기", "나가기"};
-    private Font gameOverOptionFont = new Font("SansSerif", Font.PLAIN, 24);
 
     private static final int REGION_COLS = 10;
     private static final int REGION_ROWS = 20;
@@ -166,14 +163,14 @@ public class GameScreen implements Screen {
             int sy = y + 50;
             g2.drawString(scoreMsg, sx, sy);
 
-            g2.setFont(gameOverOptionFont);
-            for (int i = 0; i < gameOverOptions.length; i++) {
-                String text = (i == gameOverSelection ? "> " : "  ") + gameOverOptions[i];
-                int optionX = (app.getWidth() - g2.getFontMetrics().stringWidth(text)) / 2;
-                int optionY = y + 100 + i * 30;
-                g2.setColor(i == gameOverSelection ? Color.YELLOW : Color.LIGHT_GRAY);
-                g2.drawString(text, optionX, optionY);
-            }
+            // 힌트 메시지
+            g2.setColor(Color.RED);
+            g2.setFont(new Font("SansSerif", Font.PLAIN, 20));
+            String hint = "Press any key";
+            int hintWidth = g2.getFontMetrics().stringWidth(hint);
+            int hintX = (app.getWidth() - hintWidth) / 2;
+            int hintY = sy + 40;
+            g2.drawString(hint, hintX, hintY);
         }
     }
 
@@ -183,22 +180,8 @@ public class GameScreen implements Screen {
         int[][] shape = (cur != null ? cur.getShape() : null);
 
         if (manager.isGameOver()) {
-            switch (e.getKeyCode()) {
-                case KeyEvent.VK_UP, KeyEvent.VK_DOWN -> {
-                    gameOverSelection = 1 - gameOverSelection;
-                    app.repaint();
-                }
-                case KeyEvent.VK_ENTER -> {
-                    if (gameOverSelection == 0) {
-                        manager.resetGame();
-                        if (timer != null) timer.start();
-                        app.repaint();
-                    } else {
-                        app.showScreen(new MenuScreen(app));
-                    }
-                }
-                default -> {}
-            }
+            if(new ScoreManager().isHighScore(manager.getScore()))
+            app.showScreen(new NameInputScreen(app,manager.getScore()));
             return;
         }
 
