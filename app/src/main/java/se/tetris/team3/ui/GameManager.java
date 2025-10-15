@@ -6,7 +6,7 @@ import java.awt.Graphics2D;
 import java.util.Random;
 
 import se.tetris.team3.blocks.Block;
-import se.tetris.team3.blocks.IBlock; // PatternPainter를 GameManager에서 쓰려면 이것도
+import se.tetris.team3.blocks.IBlock;
 import se.tetris.team3.blocks.JBlock;
 import se.tetris.team3.blocks.LBlock;
 import se.tetris.team3.blocks.OBlock;
@@ -16,13 +16,12 @@ import se.tetris.team3.blocks.ZBlock;
 import se.tetris.team3.core.Settings;
 
 public class GameManager {
-
     private final int FIELD_WIDTH = 10;
     private final int FIELD_HEIGHT = 20;
 
     private int[][] field;
     private Block currentBlock;
-    private Block nextBlock;   // 다음 블록
+    private Block nextBlock;
     private int blockX, blockY;
     private boolean isGameOver;
     private int score;
@@ -30,13 +29,23 @@ public class GameManager {
 
     private Settings settings;
 
+    private int level = 1;
+    private int linesClearedTotal = 0;
+    private int blocksGenerated = 0;
+
+    private boolean speedUp = false;
+
     public GameManager() {
         field = new int[FIELD_HEIGHT][FIELD_WIDTH];
         random = new Random();
-        nextBlock = makeRandomBlock();   // NEXT 미리 준비
-        spawnNewBlock();                 // 현재 블록으로 옮기기
+        nextBlock = makeRandomBlock();
+        spawnNewBlock();
         isGameOver = false;
         score = 0;
+        level = 1;
+        linesClearedTotal = 0;
+        blocksGenerated = 0;
+        speedUp = false;
     }
 
     public void attachSettings(Settings settings) {
@@ -71,6 +80,14 @@ public class GameManager {
         return score;
     }
 
+    public int getLevel() {
+        return level;
+    }
+
+    public boolean isSpeedUp() {
+        return speedUp;
+    }
+
     private Block makeRandomBlock() {
         int blockType = random.nextInt(7);
         return switch (blockType) {
@@ -87,15 +104,19 @@ public class GameManager {
 
     public void spawnNewBlock() {
         currentBlock = nextBlock;
-        nextBlock = makeRandomBlock();   // NEXT 갱신
+        nextBlock = makeRandomBlock();
         blockX = FIELD_WIDTH / 2 - currentBlock.width() / 2;
         blockY = 0;
+        blocksGenerated++;
+        if (blocksGenerated / 20 > level - 1) {
+            level = blocksGenerated / 20 + 1;
+        }
+        speedUp = (level > 1);
         if (isCollision(blockX, blockY, currentBlock.getShape())) {
             isGameOver = true;
         }
     }
 
-    // 이게 True 반환하면 위 메소드에서 게임오버 실행
     private boolean isCollision(int x, int y, int[][] shape) {
         for (int i = 0; i < shape.length; i++) {
             for (int j = 0; j < shape[i].length; j++) {
@@ -142,9 +163,9 @@ public class GameManager {
                 }
             }
         }
+        score += 10;  // 블록 고정 점수
     }
 
-    // 라인을 다 채우면 점수 추가
     public void clearLines() {
         int linesCleared = 0;
         for (int i = FIELD_HEIGHT - 1; i >= 0; i--) {
@@ -166,7 +187,19 @@ public class GameManager {
                 i++;
             }
         }
-        if (linesCleared > 0) score += linesCleared * 100;
+        if (linesCleared > 0) {
+            score += linesCleared * 100;
+            linesClearedTotal += linesCleared;
+            if (linesClearedTotal / 10 > level - 1) {
+                level = linesClearedTotal / 10 + 1;
+            }
+            speedUp = (level > 1);
+        }
+    }
+
+    // 누적 점수 증가 공식: 1, 6, 11, 16, ...
+    private int getFallScoreByLevel(int level) {
+        return 1 + (level - 1) * 5;
     }
 
     public void stepDownOrFix() {
@@ -174,6 +207,8 @@ public class GameManager {
             fixBlock();
             clearLines();
             spawnNewBlock();
+        } else {
+            score += getFallScoreByLevel(level);
         }
     }
 
@@ -183,26 +218,25 @@ public class GameManager {
         score = 0;
         nextBlock = makeRandomBlock();
         spawnNewBlock();
+        level = 1;
+        linesClearedTotal = 0;
+        blocksGenerated = 0;
+        speedUp = false;
     }
 
-    // HUD(점수, 다음 블록 등)를 그리는 메서드 추가
-    // **** 화면 크기에 관계없이 계속 글씨 크기가 똑같은데 이걸 어떻게 해결해야할까? (메인에도)
-
     public void renderHUD(Graphics2D g2, int padding, int blockSize) {
-        // 점수
         g2.setColor(Color.WHITE);
         g2.setFont(new Font("맑은 고딕", Font.BOLD, 16));
 
-        // 필드 폭과 HUD 시작점 계산 (우측 고정 배치)
         int fieldW = blockSize * 10;
         Settings.SizePreset preset = (settings != null ? settings.getSizePreset() : Settings.SizePreset.MEDIUM);
 
-        // 프리셋별 간격/프리뷰 박스 크기
         final int gutter = switch (preset) {
             case SMALL -> Math.max(8, blockSize / 2);
             case MEDIUM -> Math.max(12, blockSize * 2 / 3);
             case LARGE -> Math.max(16, blockSize * 3 / 4);
         };
+
         final int previewBox = switch (preset) {
             case SMALL -> blockSize * 3;
             case MEDIUM -> blockSize * 4;
@@ -213,44 +247,40 @@ public class GameManager {
         int scoreY = padding + 24;
 
         g2.drawString("SCORE: " + score, hudX, scoreY);
+        g2.drawString("LEVEL: " + level, hudX, scoreY + 22);
 
         if (nextBlock != null) {
             int[][] shape = nextBlock.getShape();
             Color color = nextBlock.getColor();
 
-            g2.drawString("NEXT:", hudX, scoreY + 28);
+            g2.drawString("NEXT:", hudX, scoreY + 44);
 
             int boxX = hudX;
-            int boxY = scoreY + 36;
+            int boxY = scoreY + 54;
 
             int rows = shape.length;
             int cols = (rows > 0 ? shape[0].length : 0);
 
-            // 프리뷰 박스에 맞춰 셀 크기 산정
             int cell = 0;
             if (rows > 0 && cols > 0) {
                 int cellForWidth  = Math.max(6, (previewBox - 2) / cols);
                 int cellForHeight = Math.max(6, (previewBox - 2) / rows);
                 cell = Math.min(cellForWidth, cellForHeight);
             }
-            // 지나치게 작거나 크게 보이지 않도록 클램프
             int minCell = Math.max(8, blockSize / 2);
             int maxCell = Math.max(minCell + 2, blockSize - 2);
             cell = Math.max(minCell, Math.min(maxCell, cell));
 
-            // 중앙 정렬 오프셋
             int totalW = cols * cell;
             int totalH = rows * cell;
             int px = boxX + Math.max(0, (previewBox - totalW) / 2);
             int py = boxY + Math.max(0, (previewBox - totalH) / 2);
 
-            // 가이드 박스(선택)
             g2.setColor(new Color(255,255,255,30));
             g2.drawRect(boxX, boxY, previewBox, previewBox);
 
             final boolean cb = (settings != null && settings.isColorBlindMode());
 
-            // 블록 그리기
             for (int r = 0; r < rows; r++) {
                 for (int c = 0; c < cols; c++) {
                     if (shape[r][c] != 0) {
