@@ -175,32 +175,33 @@ public class GameScreen implements Screen {
     }
 
     @Override
-    public void onKeyPressed(KeyEvent e) {
-        Block cur = manager.getCurrentBlock();
-        int[][] shape = (cur != null ? cur.getShape() : null);
+        public void onKeyPressed(KeyEvent e) {
+            Block cur = manager.getCurrentBlock();
+            int[][] shape = (cur != null ? cur.getShape() : null);
 
-        if (manager.isGameOver()) {
-            if(new ScoreManager().isHighScore(manager.getScore()))
-            app.showScreen(new NameInputScreen(app,manager.getScore()));
-            return;
-        }
+            if (manager.isGameOver()) {
+                if(new se.tetris.team3.ui.score.ScoreManager().isHighScore(manager.getScore())) {
+                    app.showScreen(new NameInputScreen(app, manager.getScore()));
+                }
+                return;
+            }
 
-        switch (e.getKeyCode()) {
-            case KeyEvent.VK_LEFT -> {
+            final var km = settings.getKeymap();
+            int code = e.getKeyCode();
+
+            if (code == km.get(se.tetris.team3.core.Settings.Action.MOVE_LEFT)) {
                 if (shape != null) {
                     int nx = manager.getBlockX() - 1;
                     int ny = manager.getBlockY();
                     if (fitsRegion(nx, ny, shape)) manager.tryMove(nx, ny);
                 }
-            }
-            case KeyEvent.VK_RIGHT -> {
+            } else if (code == km.get(se.tetris.team3.core.Settings.Action.MOVE_RIGHT)) {
                 if (shape != null) {
                     int nx = manager.getBlockX() + 1;
                     int ny = manager.getBlockY();
                     if (fitsRegion(nx, ny, shape)) manager.tryMove(nx, ny);
                 }
-            }
-            case KeyEvent.VK_UP -> {
+            } else if (code == km.get(se.tetris.team3.core.Settings.Action.ROTATE)) {
                 if (shape != null) {
                     int sh = shape.length, sw = shape[0].length;
                     int[][] rotated = new int[sw][sh];
@@ -220,17 +221,19 @@ public class GameScreen implements Screen {
                         }
                     }
                 }
-            }
-            case KeyEvent.VK_DOWN -> {
+            } else if (code == km.get(se.tetris.team3.core.Settings.Action.SOFT_DROP)) {
                 if (shape != null) {
                     int nx = manager.getBlockX();
                     int ny = manager.getBlockY() + 1;
                     if (fitsRegion(nx, ny, shape)) manager.tryMove(nx, ny);
-                    else manager.tryMove(nx, ny);
+                    else manager.tryMove(nx, ny); // 기존 로직 유지
                 }
+            } else if (code == km.get(se.tetris.team3.core.Settings.Action.PAUSE)) {
+                // TODO: 일시정지 구현 시 분기
+            } else if (code == km.get(se.tetris.team3.core.Settings.Action.EXIT)) {
+                app.showScreen(new MenuScreen(app));
             }
-            case KeyEvent.VK_ESCAPE -> app.showScreen(new MenuScreen(app));
+
+            app.repaint();
         }
-        app.repaint();
-    }
 }

@@ -11,8 +11,10 @@ public class SettingsScreen implements Screen {
     private final AppFrame app;
     private final Settings settings;
 
+    // ▶ "키 설정" 항목 추가
     private final String[] items = new String[] {
             "화면 크기 프리셋: %s",
+            "키 설정",
             "색맹 모드: %s",
             "스코어 초기화",
             "기본값 복원",
@@ -47,20 +49,24 @@ public class SettingsScreen implements Screen {
                 SettingsStore.save(settings);
                 app.setSize(settings.resolveWindowSize());
             }
-            case 1 -> { // 색맹 모드 토글
+            case 1 -> { // 키 설정 화면으로 이동
+                app.showScreen(new KeymapScreen(app));
+                return;
+            }
+            case 2 -> { // 색맹 모드 토글
                 settings.setColorBlindMode(!settings.isColorBlindMode());
                 SettingsStore.save(settings);
             }
-            case 2 -> { // 스코어 초기화
+            case 3 -> { // 스코어 초기화
                 SettingsStore.resetScores();
                 javax.swing.JOptionPane.showMessageDialog(null, "스코어가 초기화되었습니다.");
             }
-            case 3 -> { // 기본값 복원
+            case 4 -> { // 기본값 복원
                 settings.resetDefaults();
                 SettingsStore.save(settings);
                 app.setSize(settings.resolveWindowSize());
             }
-            case 4 -> app.showScreen(new MenuScreen(app)); // 뒤로가기
+            case 5 -> app.showScreen(new MenuScreen(app)); // 뒤로가기
         }
     }
 
@@ -113,7 +119,7 @@ public class SettingsScreen implements Screen {
     private String formatItem(int i) {
         return switch (i) {
             case 0 -> String.format(items[i], settings.getSizePreset().name());
-            case 1 -> String.format(items[i], settings.isColorBlindMode() ? "ON" : "OFF");
+            case 2 -> String.format(items[i], settings.isColorBlindMode() ? "ON" : "OFF");
             default -> items[i];
         };
     }

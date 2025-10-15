@@ -57,7 +57,7 @@ public class Settings {
         keymap.put(Action.EXIT, KeyEvent.VK_ESCAPE);
     }
 
-     /*
+    /*
 
     게임 껐을때도 색맹모드 상태 저장하고 싶다면 이 부분 추가하면 됨
 
