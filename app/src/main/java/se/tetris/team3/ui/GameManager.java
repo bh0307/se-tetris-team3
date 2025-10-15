@@ -189,40 +189,73 @@ public class GameManager {
     // **** 화면 크기에 관계없이 계속 글씨 크기가 똑같은데 이걸 어떻게 해결해야할까? (메인에도)
 
     public void renderHUD(Graphics2D g2, int padding, int blockSize) {
-        // 점수 표시
+        // 점수
         g2.setColor(Color.WHITE);
         g2.setFont(new Font("맑은 고딕", Font.BOLD, 16));
-        g2.drawString("SCORE: " + score, padding + blockSize * 12, padding + 30);
 
-        // 다음 블록 표시 영역
+        // 필드 폭과 HUD 시작점 계산 (우측 고정 배치)
+        int fieldW = blockSize * 10;
+        Settings.SizePreset preset = (settings != null ? settings.getSizePreset() : Settings.SizePreset.MEDIUM);
+
+        // 프리셋별 간격/프리뷰 박스 크기
+        final int gutter = switch (preset) {
+            case SMALL -> Math.max(8, blockSize / 2);
+            case MEDIUM -> Math.max(12, blockSize * 2 / 3);
+            case LARGE -> Math.max(16, blockSize * 3 / 4);
+        };
+        final int previewBox = switch (preset) {
+            case SMALL -> blockSize * 3;
+            case MEDIUM -> blockSize * 4;
+            case LARGE -> blockSize * 5;
+        };
+
+        int hudX = padding + fieldW + gutter;
+        int scoreY = padding + 24;
+
+        g2.drawString("SCORE: " + score, hudX, scoreY);
+
         if (nextBlock != null) {
             int[][] shape = nextBlock.getShape();
             Color color = nextBlock.getColor();
 
-            g2.drawString("NEXT:", padding + blockSize * 12, padding + 60);
+            g2.drawString("NEXT:", hudX, scoreY + 28);
 
-            // 블록 형태를 작게 오른쪽에 그림
-            int previewX = padding + blockSize * 12;
-            int previewY = padding + 70;
+            int boxX = hudX;
+            int boxY = scoreY + 36;
 
-            // ✅ 색맹모드 상태 읽기 (null 방어)
+            int rows = shape.length;
+            int cols = (rows > 0 ? shape[0].length : 0);
+
+            // 프리뷰 박스에 맞춰 셀 크기 산정
+            int cell = 0;
+            if (rows > 0 && cols > 0) {
+                int cellForWidth  = Math.max(6, (previewBox - 2) / cols);
+                int cellForHeight = Math.max(6, (previewBox - 2) / rows);
+                cell = Math.min(cellForWidth, cellForHeight);
+            }
+            // 지나치게 작거나 크게 보이지 않도록 클램프
+            int minCell = Math.max(8, blockSize / 2);
+            int maxCell = Math.max(minCell + 2, blockSize - 2);
+            cell = Math.max(minCell, Math.min(maxCell, cell));
+
+            // 중앙 정렬 오프셋
+            int totalW = cols * cell;
+            int totalH = rows * cell;
+            int px = boxX + Math.max(0, (previewBox - totalW) / 2);
+            int py = boxY + Math.max(0, (previewBox - totalH) / 2);
+
+            // 가이드 박스(선택)
+            g2.setColor(new Color(255,255,255,30));
+            g2.drawRect(boxX, boxY, previewBox, previewBox);
+
             final boolean cb = (settings != null && settings.isColorBlindMode());
 
-            // 프리뷰는 약간 줄여서 표시
-            final int cell = Math.max(8, blockSize - 4);
-
-            for (int r = 0; r < shape.length; r++) {
-                for (int c = 0; c < shape[r].length; c++) {
+            // 블록 그리기
+            for (int r = 0; r < rows; r++) {
+                for (int c = 0; c < cols; c++) {
                     if (shape[r][c] != 0) {
-                        int x = previewX + c * (blockSize - 4);
-                        int y = previewY + r * (blockSize - 4);
-                        /*
-                        g2.setColor(color);
-                        g2.fillRect(x, y, blockSize - 4, blockSize - 4);
-                        g2.setColor(Color.BLACK);
-                        g2.drawRect(x, y, blockSize - 4, blockSize - 4);
-                        */
-                        // ✅ PatternPainter 사용 (블록 객체는 미리보기라 null)
+                        int x = px + c * cell;
+                        int y = py + r * cell;
                         PatternPainter.drawCell(g2, x, y, cell, color, null, cb);
                     }
                 }
