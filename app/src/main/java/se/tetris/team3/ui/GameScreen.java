@@ -8,25 +8,23 @@ import java.awt.event.ActionListener;
 
 import se.tetris.team3.blocks.Block;
 import se.tetris.team3.core.Settings;
+import se.tetris.team3.ui.score.ScoreManager;
 
+// 키 입력/타이머/렌더링, 일시정지, 게임오버 처리
 public class GameScreen implements Screen {
 
     private final AppFrame app;
     private final Settings settings;
     private final GameManager manager;
     private Timer timer;
-    private int blockSize;
 
     private static final int REGION_COLS = 10;
     private static final int REGION_ROWS = 20;
 
     private Block lastBlockRef = null;
+    private boolean isPaused = false;
 
-    private boolean isPaused = false;  // 일시정지 상태 변수
-
-    public GameScreen(AppFrame app) {
-        this(app, new GameManager());
-    }
+    public GameScreen(AppFrame app) { this(app, new GameManager()); }
 
     public GameScreen(AppFrame app, GameManager manager) {
         this.app = app;
@@ -37,8 +35,7 @@ public class GameScreen implements Screen {
 
     @Override public void onShow() {
         timer = new Timer(1000, new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
+            @Override public void actionPerformed(ActionEvent e) {
                 if (!manager.isGameOver() && !isPaused) {
                     manager.stepDownOrFix();
                     updateTimerDelay();
@@ -51,9 +48,7 @@ public class GameScreen implements Screen {
         timer.start();
     }
 
-    @Override public void onHide() {
-        if (timer != null) timer.stop();
-    }
+    @Override public void onHide() { if (timer != null) timer.stop(); }
 
     private void updateTimerDelay() {
         int delay = Math.max(100, 1000 - (manager.getLevel() - 1) * 100);
@@ -75,11 +70,9 @@ public class GameScreen implements Screen {
     }
 
     private static int bottomRowIndex(int[][] shape) {
-        for (int r = shape.length - 1; r >= 0; r--) {
-            for (int c = 0; c < shape[r].length; c++) {
+        for (int r = shape.length - 1; r >= 0; r--)
+            for (int c = 0; c < shape[r].length; c++)
                 if (shape[r][c] != 0) return r;
-            }
-        }
         return shape.length - 1;
     }
 
@@ -100,6 +93,28 @@ public class GameScreen implements Screen {
         lastBlockRef = cur;
     }
 
+    // 셀 중앙에 문자 그리기 (L 표시에 사용)
+    public static void drawCenteredChar(Graphics2D g2, int x, int y, int size, char ch) {
+        Font old = g2.getFont();
+        Object aa = g2.getRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING);
+        g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+        g2.setFont(new Font("Monospaced", Font.BOLD, Math.max(10, (int)(size * 0.6))));
+        String s = String.valueOf(ch);
+        FontMetrics fm = g2.getFontMetrics();
+        int tx = x + (size - fm.stringWidth(s)) / 2;
+        int ty = y + (size + fm.getAscent() - fm.getDescent()) / 2;
+
+        g2.setColor(new Color(0,0,0,180)); // 외곽
+        for (int dx=-1; dx<=1; dx++) for (int dy=-1; dy<=1; dy++) {
+            if (dx==0 && dy==0) continue; g2.drawString(s, tx+dx, ty+dy);
+        }
+        g2.setColor(new Color(255,255,255,230));
+        g2.drawString(s, tx, ty);
+
+        g2.setFont(old);
+        g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, aa);
+    }
+
     @Override
     public void render(Graphics2D g2) {
         int blockSize = settings.resolveBlockSize();
@@ -109,16 +124,14 @@ public class GameScreen implements Screen {
         g2.fillRect(0, 0, app.getWidth(), app.getHeight());
 
         if (isPaused) {
-            int width = app.getWidth();
-            int height = app.getHeight();
-            g2.setColor(new Color(255, 255, 255, 160));
-            g2.fillRect(0, 0, width, height);
-
+            int width = app.getWidth(), height = app.getHeight();
+            g2.setColor(new Color(255,255,255,160));
+            g2.fillRect(0,0,width,height);
             g2.setColor(Color.RED);
             g2.setFont(new Font("SansSerif", Font.BOLD, 72));
             String msg = "PAUSED";
             int msgWidth = g2.getFontMetrics().stringWidth(msg);
-            g2.drawString(msg, (width - msgWidth) / 2, height / 2);
+            g2.drawString(msg, (width - msgWidth)/2, height/2);
             return;
         }
 
@@ -129,10 +142,10 @@ public class GameScreen implements Screen {
 
         alignSpawnIfNewBlock();
 
+        // 고정 블록
         for (int r = 0; r < REGION_ROWS; r++) {
             for (int c = 0; c < REGION_COLS; c++) {
-                int colorValue = manager.getFieldValue(r, c);
-                if (colorValue != 0) {
+                if (manager.getFieldValue(r, c) != 0) {
                     int x = padding + c * blockSize;
                     int y = padding + r * blockSize;
                     PatternPainter.drawCell(g2, x, y, blockSize, Color.GRAY, null, settings.isColorBlindMode());
@@ -140,21 +153,36 @@ public class GameScreen implements Screen {
             }
         }
 
+        // 현재 블록
         if (!manager.isGameOver()) {
             Block cur = manager.getCurrentBlock();
             if (cur != null) {
                 int[][] shape = cur.getShape();
                 Color base = cur.getColor();
-                int bx = manager.getBlockX();
-                int by = manager.getBlockY();
+                int bx = manager.getBlockX(), by = manager.getBlockY();
+
+                // L 위치 (있을 때만 사용)
+                Integer ir = null, ic = null;
+                if (cur.getItemType() == 'L') {
+                    try {
+                        ir = (Integer) cur.getClass().getMethod("getItemRow").invoke(cur);
+                        ic = (Integer) cur.getClass().getMethod("getItemCol").invoke(cur);
+                    } catch (Exception ignore) {}
+                }
+
                 for (int r = 0; r < shape.length; r++) {
                     for (int c = 0; c < shape[r].length; c++) {
                         if (shape[r][c] != 0) {
                             int gx = bx + c, gy = by + r;
-                            if (gx >= 0 && gx < REGION_COLS && gy >= 0 && gy < REGION_ROWS) {
+                            if (gx>=0 && gx<REGION_COLS && gy>=0 && gy<REGION_ROWS) {
                                 int x = padding + gx * blockSize;
                                 int y = padding + gy * blockSize;
                                 PatternPainter.drawCell(g2, x, y, blockSize, base, cur, settings.isColorBlindMode());
+
+                                // ★ 줄삭제 L은 붙은 칸에만 문자 오버레이(무게추는 글자 없음)
+                                if (cur.getItemType() == 'L' && ir != null && ic != null && r == ir && c == ic) {
+                                    drawCenteredChar(g2, x, y, blockSize, 'L');
+                                }
                             }
                         }
                     }
@@ -162,6 +190,7 @@ public class GameScreen implements Screen {
             }
             manager.renderHUD(g2, padding, blockSize);
         } else {
+            // GAME OVER
             g2.setColor(Color.RED);
             g2.setFont(new Font("SansSerif", Font.BOLD, 48));
             String msg = "GAME OVER";
@@ -181,9 +210,7 @@ public class GameScreen implements Screen {
             g2.setFont(new Font("SansSerif", Font.PLAIN, 20));
             String hint = "Press any key";
             int hintWidth = g2.getFontMetrics().stringWidth(hint);
-            int hintX = (app.getWidth() - hintWidth) / 2;
-            int hintY = sy + 40;
-            g2.drawString(hint, hintX, hintY);
+            g2.drawString(hint, (app.getWidth() - hintWidth) / 2, sy + 40);
         }
     }
 
@@ -194,7 +221,7 @@ public class GameScreen implements Screen {
         int[][] shape = (cur != null ? cur.getShape() : null);
 
         if (manager.isGameOver()) {
-            if(new se.tetris.team3.ui.score.ScoreManager().isHighScore(manager.getScore())) {
+            if (new ScoreManager().isHighScore(manager.getMode(), manager.getScore())) {
                 app.showScreen(new NameInputScreen(app, manager.getScore()));
             }
             return;
@@ -203,38 +230,23 @@ public class GameScreen implements Screen {
         if (code == KeyEvent.VK_SPACE) {
             isPaused = !isPaused;
             if (!isPaused) {
-                if (manager.isGameOver()) {
-                    if (timer != null) timer.stop();
-                } else {
-                    manager.stepDownOrFix();  // 재개 시 즉시 블록 처리
+                if (manager.isGameOver()) { if (timer != null) timer.stop(); }
+                else {
+                    manager.stepDownOrFix();
                     updateTimerDelay();
                     if (timer != null && !timer.isRunning()) timer.start();
                 }
-            } else {
-                if (timer != null) timer.stop();
-            }
-            app.repaint();
-            return;
+            } else { if (timer != null) timer.stop(); }
+            app.repaint(); return;
         }
-
-        if (isPaused) {
-            return;
-        }
+        if (isPaused) return;
 
         final var km = settings.getKeymap();
 
         if (code == km.get(se.tetris.team3.core.Settings.Action.MOVE_LEFT)) {
-            if (shape != null) {
-                int nx = manager.getBlockX() - 1;
-                int ny = manager.getBlockY();
-                if (fitsRegion(nx, ny, shape)) manager.tryMove(nx, ny);
-            }
+            if (shape != null) manager.tryMove(manager.getBlockX() - 1, manager.getBlockY());
         } else if (code == km.get(se.tetris.team3.core.Settings.Action.MOVE_RIGHT)) {
-            if (shape != null) {
-                int nx = manager.getBlockX() + 1;
-                int ny = manager.getBlockY();
-                if (fitsRegion(nx, ny, shape)) manager.tryMove(nx, ny);
-            }
+            if (shape != null) manager.tryMove(manager.getBlockX() + 1, manager.getBlockY());
         } else if (code == km.get(se.tetris.team3.core.Settings.Action.ROTATE)) {
             if (shape != null) {
                 int sh = shape.length, sw = shape[0].length;
@@ -243,27 +255,16 @@ public class GameScreen implements Screen {
                     for (int c = 0; c < sw; c++)
                         rotated[c][sh - 1 - r] = shape[r][c];
                 int bx = manager.getBlockX(), by = manager.getBlockY();
-                if (fitsRegion(bx, by, rotated)) {
-                    manager.rotateBlock();
-                } else {
+                if (fitsRegion(bx, by, rotated)) manager.rotateBlock();
+                else {
                     int[] kicks = {-1, 1, -2, 2};
                     for (int dx : kicks) {
-                        if (fitsRegion(bx + dx, by, rotated) && manager.tryMove(bx + dx, by)) {
-                            manager.rotateBlock();
-                            break;
-                        }
+                        if (fitsRegion(bx + dx, by, rotated) && manager.tryMove(bx + dx, by)) { manager.rotateBlock(); break; }
                     }
                 }
             }
         } else if (code == km.get(se.tetris.team3.core.Settings.Action.SOFT_DROP)) {
-            if (shape != null) {
-                int nx = manager.getBlockX();
-                int ny = manager.getBlockY() + 1;
-                if (fitsRegion(nx, ny, shape)) manager.tryMove(nx, ny);
-                else manager.tryMove(nx, ny);
-            }
-        } else if (code == km.get(se.tetris.team3.core.Settings.Action.PAUSE)) {
-            // 기존 기능 비워두기
+            if (shape != null) manager.tryMove(manager.getBlockX(), manager.getBlockY() + 1);
         } else if (code == km.get(se.tetris.team3.core.Settings.Action.EXIT)) {
             app.showScreen(new MenuScreen(app));
         }

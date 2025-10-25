@@ -21,7 +21,7 @@ public class ScoreManagerTest {
     void setUp() {
         // 테스트용 파일명으로 변경 (원본 파일 보호)
         deleteTestFile();
-        scoreManager = new ScoreManager();
+        scoreManager = new ScoreManager("scoreFile.txt");
     }
     
     @AfterEach
@@ -31,10 +31,10 @@ public class ScoreManagerTest {
     }
     
     private void deleteTestFile() {
-        File testFile = new File("scoreFile.txt");
-        if (testFile.exists()) {
-            testFile.delete();
-        }
+        File classicFile = new File("scoreFile.txt");
+        File itemFile = new File("scoreFile.txt.item");
+        if (classicFile.exists()) classicFile.delete();
+        if (itemFile.exists()) itemFile.delete();
     }
     
     @Test
