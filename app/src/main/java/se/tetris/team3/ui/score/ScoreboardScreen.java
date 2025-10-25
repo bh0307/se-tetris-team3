@@ -1,8 +1,6 @@
 package se.tetris.team3.ui.score;
 
-import java.awt.Color;
-import java.awt.Font;
-import java.awt.Graphics2D;
+import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.List;
@@ -12,8 +10,12 @@ import se.tetris.team3.ui.MenuItem;
 import se.tetris.team3.ui.MenuScreen;
 import se.tetris.team3.ui.Screen;
 import se.tetris.team3.ui.score.ScoreManager.ScoreEntry;
+import se.tetris.team3.core.GameMode;
 
+// 스코어보드 화면
+// 현재 Settings의 GameMode를 읽어 모드별 상위 랭킹을 보여줌
 public class ScoreboardScreen implements Screen {
+    
     private static final String SCORE_FORMAT_MESSAGE = "YOUR SCORE: %d points";
     
     private int idx = 0;
@@ -59,7 +61,7 @@ public class ScoreboardScreen implements Screen {
         
         // 스코어 테이블 렌더링
         renderScoreTable(g2, width);
-        
+
         // 메뉴 렌더링
         renderMenu(g2, width, height);
     }
@@ -69,10 +71,9 @@ public class ScoreboardScreen implements Screen {
         g2.setFont(new Font("Monospaced", Font.BOLD, 24));
         
         String title = "TOP 10";
+
         int titleWidth = g2.getFontMetrics().stringWidth(title);
-        int titleX = (width - titleWidth) / 2;
-        
-        g2.drawString(title, titleX, 80);
+        g2.drawString(title, (width - titleWidth) / 2, 80);
     }
     
     private void renderPlayerScore(Graphics2D g2, int width) {
@@ -81,9 +82,8 @@ public class ScoreboardScreen implements Screen {
         
         String message = String.format(SCORE_FORMAT_MESSAGE, playerScore);
         int messageWidth = g2.getFontMetrics().stringWidth(message);
-        int messageX = (width - messageWidth) / 2;
         
-        g2.drawString(message, messageX, 120);
+        g2.drawString(message, (width - messageWidth) / 2, 120);
     }
     
     private void renderScoreTable(Graphics2D g2, int width) {
@@ -103,12 +103,12 @@ public class ScoreboardScreen implements Screen {
         g2.drawString("Date", dateX, headerY);
         
         // 헤더 아래 구분선
-        int lineStart = leftMargin - 10;
-        int lineEnd = width - leftMargin + 10;
-        g2.drawLine(lineStart, headerY + 10, lineEnd, headerY + 10);
+        g2.drawLine(leftMargin - 10, headerY + 10, width - leftMargin + 10, headerY + 10);
         
+        // 현재 모드
+        GameMode mode = app.getSettings().getGameMode();
         // 스코어 데이터
-        List<ScoreEntry> scores = scoreManager.getHighScores();
+        List<ScoreEntry> scores = scoreManager.getHighScores(mode);
         
         for (int i = 0; i < Math.min(scores.size(), 10); i++) {
             ScoreEntry entry = scores.get(i);
@@ -165,7 +165,7 @@ public class ScoreboardScreen implements Screen {
             return false;
         }
         return entry.getPlayerName().equals(playerName) && 
-               entry.getScore() == playerScore;
+            entry.getScore() == playerScore;
     }
 
     @Override

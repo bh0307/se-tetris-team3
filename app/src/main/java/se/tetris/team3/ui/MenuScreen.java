@@ -1,17 +1,17 @@
 package se.tetris.team3.ui;
 
-import java.awt.Color;
-import java.awt.Font;
-import java.awt.Graphics2D;
-import java.awt.RenderingHints;
+import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.List;
 
+import se.tetris.team3.core.GameMode;
 import se.tetris.team3.ui.score.ScoreManager;
 import se.tetris.team3.ui.score.ScoreboardScreen;
 
+// 메뉴 항목: 클래식 시작, 아이템 모드 시작, 설정, 스코어보드, 종료
 public class MenuScreen implements Screen {
+
     private final AppFrame app;
     private final List<MenuItem> items = new ArrayList<>();
     private int idx = 0; // 현재 선택 인덱스
@@ -19,15 +19,16 @@ public class MenuScreen implements Screen {
     public MenuScreen(AppFrame app) {
         this.app = app;
 
-        items.add(new MenuItem("게임 시작", () -> {
-            app.showScreen(new GameScreen(app));
+        items.add(new MenuItem("클래식 시작", () -> {
+            app.getSettings().setGameMode(GameMode.CLASSIC);
+            app.showScreen(new GameScreen(app, new GameManager(GameMode.CLASSIC)));
         }));
-        items.add(new MenuItem("설정", () -> {
-            app.showScreen(new SettingsScreen(app)); //SettingsScreen으로 실제 전환
+        items.add(new MenuItem("아이템 모드 시작", () -> {
+            app.getSettings().setGameMode(GameMode.ITEM);
+            app.showScreen(new GameScreen(app, new GameManager(GameMode.ITEM)));
         }));
-        items.add(new MenuItem("스코어보드", () -> {
-            app.showScreen(new ScoreboardScreen(app, -1, new ScoreManager()));
-        }));
+        items.add(new MenuItem("설정", () -> app.showScreen(new SettingsScreen(app))));
+        items.add(new MenuItem("스코어보드", () -> app.showScreen(new ScoreboardScreen(app, -1, new ScoreManager()))));
         items.add(new MenuItem("종료", () -> System.exit(0)));
     }
 
@@ -75,8 +76,9 @@ public class MenuScreen implements Screen {
         }
         app.repaint();
     }
-
-    @Override public void onShow() { /* 필요시 포커스 관련 처리 추가 가능 */ }
-    @Override public void onHide() { /* 필요시 리소스 정리 */ }
+    //필요시 포커스 관련 처리 추가 가능
+    @Override public void onShow() {}
+    //필요시 리소스 정리
+    @Override public void onHide() {}
     
 }

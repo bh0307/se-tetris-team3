@@ -1,5 +1,6 @@
 package se.tetris.team3.store;
 
+import se.tetris.team3.core.GameMode;
 import se.tetris.team3.core.Settings;
 import se.tetris.team3.core.Settings.Action;
 import se.tetris.team3.core.Settings.SizePreset;
@@ -9,6 +10,7 @@ import java.io.*;
 import java.nio.file.*;
 import java.util.Properties;
 
+// Settings를 프로그램 재실행 후에도 유지하려고 쓰는 영속 저장 레이어
 public class SettingsStore {
 
     private static final String DIR  = System.getProperty("user.home") + File.separator + ".tetris";
@@ -22,6 +24,7 @@ public class SettingsStore {
 
             p.setProperty("sizePreset", s.getSizePreset().name());
             p.setProperty("colorBlind", Boolean.toString(s.isColorBlindMode()));
+            p.setProperty("gameMode", s.getGameMode().name());
 
             // 키맵(settings.properties에 저장된 키 설정 다시 불러오기) 저장
             for (var e : s.getKeymap().entrySet()) {
@@ -53,6 +56,9 @@ public class SettingsStore {
                     p.getProperty("colorBlind", Boolean.toString(s.isColorBlindMode()))
             ));
 
+            String gm = p.getProperty("gameMode", GameMode.CLASSIC.name());
+            try { s.setGameMode(GameMode.valueOf(gm)); } catch ( IllegalArgumentException ignore) {}
+            
             // 키맵 복원
             for (Action a : Action.values()) {
                 String v = p.getProperty("key." + a.name());
@@ -69,7 +75,7 @@ public class SettingsStore {
         }
     }
 
-    // ScoreManager API를 통해 스코어 초기화
+    // 스코어 초기화
     public static void resetScores() {
         try {
             ScoreManager manager = new ScoreManager();
@@ -79,53 +85,4 @@ public class SettingsStore {
             System.err.println("[SettingsStore] resetScores failed: " + e.getMessage());
         }
     }
-
-    /*
-
-    어쩌다보니 GPT가 작성해줘서 일단은 놔둠
-
-    public static void loadSettings(Settings settings) {
-        // TODO: 파일에서 설정을 불러오는 로직 구현 예정
-        // 지금은 비워둬도 됨
-
-        // 예시 구현 (JSON 파싱 라이브러리 없이 간단히 구현)
-        // 나중에 프로그램 꺼도 색맹모드 유지하려면 이 부분 구현 필요
-
-        File file = new File(SETTINGS_FILE);
-        if (!file.exists()) return;
-
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))) {
-
-            String json = reader.readLine();
-            if (json != null && json.contains("\"colorBlindMode\":true")) {
-                settings.setColorBlindMode(true);
-            } else {
-                settings.setColorBlindMode(false);
-            }
-
-        } catch (IOException e) {
-            System.err.println("[SettingsStore] 설정 파일 로드 실패: " + e.getMessage());
-        }
-    }
-
-    public static void saveSettings(Settings settings) {
-        // TODO: 설정 저장 로직 구현 예정
-
-        // 예시 구현 (JSON 파싱 라이브러리 없이 간단히 구현)
-        // 나중에 프로그램 꺼도 색맹모드 유지하려면 이 부분 구현 필요
-
-        File file = new File(SETTINGS_FILE);
-        try (BufferedWriter writer = new BufferedWriter(
-                new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8))) {
-
-            String json = String.format("{\"colorBlindMode\":%s}", settings.isColorBlindMode());
-            writer.write(json);
-
-        } catch (IOException e) {
-            System.err.println("[SettingsStore] 설정 파일 저장 실패: " + e.getMessage());
-        }
-    }
-    */
-
 }
