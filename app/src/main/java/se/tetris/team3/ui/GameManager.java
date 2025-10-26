@@ -19,21 +19,11 @@ import se.tetris.team3.core.GameMode;
 import se.tetris.team3.core.Settings;
 
 
-// 게임 진행(보드/블록 상태/스폰/점수/아이템 효과) 총괄 매니저
 public class GameManager {
 
-    public void destroyBlocksBelow() {
-        activateWeightEffect();
-    }
-
-    public void forceClearRowAtItem() {
-        applyLineClearItem();
-    }
-
-    // 보드/레벨 기본
     private static final int FIELD_WIDTH = 10;
     private static final int FIELD_HEIGHT = 20;
-    private static final int ANVIL_WIDTH = 4; // 무게추 효과 폭(4열)
+    private static final int ANVIL_WIDTH = 4;
 
     private final Random random = new Random();
 
@@ -44,7 +34,6 @@ public class GameManager {
 
     private boolean isGameOver;
     private int score;
-
     private int level = 1;
     private int linesClearedTotal = 0;
     private int blocksGenerated = 0;
@@ -53,33 +42,52 @@ public class GameManager {
     private GameMode mode = GameMode.CLASSIC;
 
     // 아이템 상태
-    private boolean pendingItem = false; // 다음 블록을 아이템으로 예약?
-    private boolean weightLocked = false; // 무게추: 고정 후 좌우 이동 금지
+    private boolean pendingItem = false;
+    private boolean weightLocked = false;
 
-    // 생성/초기화
+    // 난이도 적용 변수
+    private Settings.Difficulty difficulty = Settings.Difficulty.NORMAL;
+    private int baseFallDelay = 500; // 기본 낙하 딜레이(ms)
+    private double scoreMultiplier = 1.0;
+
+    // 생성자
     public GameManager() { this(GameMode.CLASSIC); }
 
     public GameManager(GameMode mode) {
         this.mode = (mode != null ? mode : GameMode.CLASSIC);
-        nextBlock = makeRandomBlock(); // 첫 프리뷰
-        spawnNewBlock();               // 첫 현재블록
+        nextBlock = makeRandomBlock();
+        spawnNewBlock();
     }
 
+    // 설정 객체 적용
     public void attachSettings(Settings settings) {
-        if (settings != null && settings.getGameMode() != null) this.mode = settings.getGameMode();
+        if (settings != null) {
+            difficulty = settings.getDifficulty();
+            applyDifficultySettings();
+            if (settings.getGameMode() != null) this.mode = settings.getGameMode();
+        }
     }
 
-    // 외부 조회
-    public GameMode getMode()           { return mode; }
+    // 난이도별 설정 적용
+    private void applyDifficultySettings() {
+        switch (difficulty) {
+            case EASY -> { baseFallDelay = 700; scoreMultiplier = 0.8; } // 느린 낙하, 점수 감소
+            case NORMAL -> { baseFallDelay = 500; scoreMultiplier = 1.0; } // 기본
+            case HARD -> { baseFallDelay = 300; scoreMultiplier = 1.2; } // 빠른 낙하, 점수 보너스
+        }
+    }
+
+    // Getter
+    public GameMode getMode() { return mode; }
     public int getFieldValue(int r,int c){ return field[r][c]; }
-    public Block getCurrentBlock()      { return currentBlock; }
-    public Block getNextBlock()         { return nextBlock; }
-    public int getBlockX()              { return blockX; }
-    public int getBlockY()              { return blockY; }
-    public boolean isGameOver()         { return isGameOver; }
-    public int getScore()               { return score; }
-    public int getLevel()               { return level; }
-    public boolean isSpeedUp()          { return speedUp; }
+    public Block getCurrentBlock() { return currentBlock; }
+    public Block getNextBlock() { return nextBlock; }
+    public int getBlockX() { return blockX; }
+    public int getBlockY() { return blockY; }
+    public boolean isGameOver() { return isGameOver; }
+    public int getScore() { return score; }
+    public int getLevel() { return level; }
+    public boolean isSpeedUp() { return speedUp; }
 
     // 블록 생성
     private Block makeRandomBlock() {
@@ -94,21 +102,20 @@ public class GameManager {
         };
     }
 
+    // 새로운 블록 등장
     public void spawnNewBlock() {
         currentBlock = nextBlock;
         weightLocked = false;
 
-        Block candidate = makeRandomBlock(); // 기본 다음 블록
+        Block candidate = makeRandomBlock();
 
+        // 아이템 블록 처리
         if (pendingItem) {
-            // 아이템 종류 랜덤 선택: true=무게추, false=줄삭제
             boolean pickAnvil = random.nextBoolean();
             if (pickAnvil) {
-                // 무게추는 "전용 조각(폭4)" 자체로 표현 (문자 불필요)
                 candidate = new AnvilItemBlock();
-                candidate.setItemType((char)0); // 혹시 남은 표식 제거
+                candidate.setItemType((char)0);
             } else {
-                // 줄삭제: 일반 블록에 'L'을 블록 내부 임의 한 칸에 태깅
                 candidate = makeRandomBlock();
                 candidate.setItemType('L');
                 int[][] shp = candidate.getShape();
@@ -118,16 +125,14 @@ public class GameManager {
                         if (shp[r][c] == 1) ones.add(new int[]{r, c});
                 if (!ones.isEmpty()) {
                     int[] pick = ones.get(random.nextInt(ones.size()));
-                    // Block에 setItemCell가 있으면 직접 호출, 없으면 리플렉션 시도
                     try {
                         candidate.getClass().getMethod("setItemCell", int.class, int.class)
                                 .invoke(candidate, pick[0], pick[1]);
-                    } catch (Exception ignore) { /* Block에 API 없다면 표시만 없이 동작 */ }
+                    } catch (Exception ignore) {}
                 }
             }
             pendingItem = false;
         } else {
-            // 아이템 예약이 아니면 아이템 표식 초기화
             candidate.setItemType((char)0);
             try { candidate.getClass().getMethod("setItemCell", int.class, int.class).invoke(candidate, -1, -1); }
             catch (Exception ignore) {}
@@ -139,13 +144,15 @@ public class GameManager {
         blockY = 0;
         blocksGenerated++;
 
+        // 생성 직후 충돌 시 게임 오버
         if (isCollision(blockX, blockY, currentBlock.getShape())) isGameOver = true;
 
+        // 레벨 증가
         if (blocksGenerated / 20 > level - 1) level = blocksGenerated / 20 + 1;
         speedUp = (level > 1);
     }
 
-    // 충돌/이동/회전 
+    // 충돌 체크
     private boolean isCollision(int x, int y, int[][] shape) {
         for (int i = 0; i < shape.length; i++) {
             for (int j = 0; j < shape[i].length; j++) {
@@ -159,22 +166,22 @@ public class GameManager {
         return false;
     }
 
+    // 블록 이동 시도
     public boolean tryMove(int newX, int newY) {
-        // 무게추: 고정 후 좌우 이동 금지
         if ((currentBlock instanceof AnvilItemBlock) && weightLocked && newX != blockX) return false;
         if (isCollision(newX, newY, currentBlock.getShape())) return false;
         blockX = newX; blockY = newY; return true;
     }
 
+    // 블록 회전
     public void rotateBlock() {
         currentBlock.rotate();
         if (isCollision(blockX, blockY, currentBlock.getShape())) {
-            // 3회 역회전
-            currentBlock.rotate(); currentBlock.rotate(); currentBlock.rotate();
+            currentBlock.rotate(); currentBlock.rotate(); currentBlock.rotate(); // 원위치
         }
     }
 
-    // 고정/아이템효과
+    // 블록 고정
     public void fixBlock() {
         int[][] s = currentBlock.getShape();
         for (int i = 0; i < s.length; i++)
@@ -183,29 +190,23 @@ public class GameManager {
 
         score += 10;
 
-        if (currentBlock instanceof AnvilItemBlock) {
-            weightLocked = true; // 고정되면 좌우락
-            // (무게추는 낙하 중에 이미 지우고 있어서 고정 시 추가 효과 없음)
-        }
+        if (currentBlock instanceof AnvilItemBlock) weightLocked = true;
 
-        if (mode == GameMode.ITEM && currentBlock.getItemType() == 'L') {
-            applyLineClearItem(); // ‘그 줄’ 하나만 삭제(+100)
-        }
+        if (mode == GameMode.ITEM && currentBlock.getItemType() == 'L') applyLineClearItem();
     }
 
+    // 한 줄 제거
     private void clearRow(int row) {
         if (row < 0 || row >= FIELD_HEIGHT) return;
         for (int y = row; y > 0; y--) System.arraycopy(field[y - 1], 0, field[y], 0, FIELD_WIDTH);
         for (int x = 0; x < FIELD_WIDTH; x++) field[0][x] = 0;
     }
 
-    // 줄삭제(L) : 블록 내부의 L이 붙은 그 줄 하나만 삭제 
+    // 아이템 '라인 제거' 적용
     private void applyLineClearItem() {
         int rLocal = -1;
-        // Block에 getItemRow()가 있으면 사용, 없으면 리플렉션
-        try {
-            rLocal = (int) currentBlock.getClass().getMethod("getItemRow").invoke(currentBlock);
-        } catch (Exception ignore) {}
+        try { rLocal = (int) currentBlock.getClass().getMethod("getItemRow").invoke(currentBlock); } 
+        catch (Exception ignore) {}
         if (rLocal < 0) return;
 
         int row = blockY + rLocal;
@@ -215,13 +216,10 @@ public class GameManager {
         score += 100;
         linesClearedTotal++;
 
-        // 10줄마다 다음 아이템 예약 (종류는 스폰 때 랜덤 선택)
-        if (mode == GameMode.ITEM && linesClearedTotal % 10 == 0) {
-            pendingItem = true;
-        }
+        if (mode == GameMode.ITEM && linesClearedTotal % 10 == 0) pendingItem = true;
     }
 
-    // 무게추: 낙하 중 4열을 바닥까지 지속적으로 삭제 
+    // 무게 블록 효과: 아래 블록 제거
     private void activateWeightEffect() {
         int startX = anvilStartX();
         int endX = startX + ANVIL_WIDTH - 1;
@@ -236,7 +234,11 @@ public class GameManager {
         return Math.max(0, Math.min(start, FIELD_WIDTH - ANVIL_WIDTH));
     }
 
-    // 라인 클리어/레벨/아이템 예약
+    // 외부에서 호출할 아이템 관련 메서드
+    public void destroyBlocksBelow() { activateWeightEffect(); }
+    public void forceClearRowAtItem() { applyLineClearItem(); }
+
+    // 완전한 줄 제거
     public void clearLines() {
         int lines = 0;
         for (int i = FIELD_HEIGHT - 1; i >= 0; i--) {
@@ -250,20 +252,16 @@ public class GameManager {
             }
         }
         if (lines > 0) {
-            score += lines * 100;
+            score += Math.round(lines * 100 * scoreMultiplier);
             linesClearedTotal += lines;
             if (linesClearedTotal / 10 > level - 1) level = linesClearedTotal / 10 + 1;
             speedUp = (level > 1);
-
-            // 10줄마다 다음 아이템 예약 (종류는 스폰 시 랜덤)
-            if (mode == GameMode.ITEM && linesClearedTotal % 10 == 0) {
-                pendingItem = true;
-            }
+            if (mode == GameMode.ITEM && linesClearedTotal % 10 == 0) pendingItem = true;
         }
     }
 
+    // 블록 한 칸 아래로 이동 또는 고정
     public void stepDownOrFix() {
-        // 무게추는 낙하 중 계속 뚫고 내려감
         if (currentBlock instanceof AnvilItemBlock) activateWeightEffect();
 
         if (!tryMove(blockX, blockY + 1)) {
@@ -271,10 +269,11 @@ public class GameManager {
             clearLines();
             spawnNewBlock();
         } else {
-            score += 1 + (level - 1) * 5;
+            score += Math.round((1 + (level - 1) * 5) * scoreMultiplier);
         }
     }
 
+    // 게임 초기화
     public void resetGame() {
         field = new int[FIELD_HEIGHT][FIELD_WIDTH];
         isGameOver = false;
@@ -287,49 +286,62 @@ public class GameManager {
         speedUp = false;
         pendingItem = false;
         weightLocked = false;
+
+        applyDifficultySettings();
     }
 
-    // HUD: 점수/레벨/다음블록(줄삭제는 L 문자 표기, 무게추는 전용 모양으로 구분)
-    public void renderHUD(Graphics2D g2, int padding, int blockSize) {
-        g2.setColor(Color.WHITE);
-        g2.setFont(new Font("맑은 고딕", Font.BOLD, 16));
+  // HUD: 점수/레벨/난이도/다음블록(줄삭제는 L 문자 표기, 무게추는 전용 모양으로 구분)
+public void renderHUD(Graphics2D g2, int padding, int blockSize) {
+    g2.setColor(Color.WHITE);
+    g2.setFont(new Font("맑은 고딕", Font.BOLD, 16));
 
-        int fieldW = blockSize * 10;
-        int hudX = padding + fieldW + 16;
-        int scoreY = padding + 24;
+    int fieldW = blockSize * 10;           // 보드 폭
+    int hudX = padding + fieldW + 16;      // HUD 시작 X 좌표
+    int scoreY = padding + 24;             // HUD 첫 Y 좌표
 
-        g2.drawString("SCORE: " + score, hudX, scoreY);
-        g2.drawString("LEVEL: " + level, hudX, scoreY + 22);
+    // 점수 표시
+    g2.drawString("SCORE: " + score, hudX, scoreY);
 
-        if (nextBlock != null) {
-            int[][] shape = nextBlock.getShape();
-            Color color = nextBlock.getColor();
-            g2.drawString("NEXT:", hudX, scoreY + 44);
+    // 레벨 표시
+    g2.drawString("LEVEL: " + level, hudX, scoreY + 24);
 
-            int cell = Math.max(8, blockSize / 2);
-            Integer ir = null, ic = null;
-            if (nextBlock.getItemType() == 'L') {
-                try {
-                    ir = (Integer) nextBlock.getClass().getMethod("getItemRow").invoke(nextBlock);
-                    ic = (Integer) nextBlock.getClass().getMethod("getItemCol").invoke(nextBlock);
-                } catch (Exception ignore) {}
-            }
+    // 난이도 표시
+    g2.drawString("DIFFICULTY: " + difficulty.name(), hudX, scoreY + 48);
 
-            for (int r = 0; r < shape.length; r++) {
-                for (int c = 0; c < shape[r].length; c++) {
-                    if (shape[r][c] != 0) {
-                        int x = hudX + c * cell;
-                        int y = scoreY + 60 + r * cell;
-                        g2.setColor(color);
-                        g2.fillRect(x, y, cell - 1, cell - 1);
+    // 다음 블록 표시
+    if (nextBlock != null) {
+        int[][] shape = nextBlock.getShape();
+        Color color = nextBlock.getColor();
 
-                        // L은 붙은 칸에만 문자 표시 (무게추는 글자 없음)
-                        if (nextBlock.getItemType() == 'L' && ir != null && ic != null && r == ir && c == ic) {
-                            GameScreen.drawCenteredChar(g2, x, y, cell, 'L');
-                        }
-                    }
-                }
-            }
+        g2.drawString("NEXT:", hudX, scoreY + 72);
+
+        int cell = Math.max(8, blockSize / 2); // 최소 셀 크기 8
+        Integer ir = null, ic = null;
+
+        // 다음 블록이 줄삭제 아이템(L)인 경우 위치 조회
+        if (nextBlock.getItemType() == 'L') {
+            try {
+                ir = (Integer) nextBlock.getClass().getMethod("getItemRow").invoke(nextBlock);
+                ic = (Integer) nextBlock.getClass().getMethod("getItemCol").invoke(nextBlock);
+            } catch (Exception ignore) {}
         }
-    }
+
+        // 다음 블록 그리기
+        for (int r = 0; r < shape.length; r++) {
+            for (int c = 0; c < shape[r].length; c++) {
+                if (shape[r][c] != 0) {
+                    int x = hudX + c * cell;
+                    int y = scoreY + 88 + r * cell;
+                    g2.setColor(color);
+                    g2.fillRect(x, y, cell - 1, cell - 1);
+
+                    // L 아이템은 문자 표시
+                    if (nextBlock.getItemType() == 'L' && ir != null && ic != null && r == ir && c == ic) {
+                        GameScreen.drawCenteredChar(g2, x, y, cell, 'L');
+                     }
+                 }
+             }
+         }
+     }
+ }
 }
