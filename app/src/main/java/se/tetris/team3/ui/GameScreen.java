@@ -34,19 +34,32 @@ public class GameScreen implements Screen {
     }
 
     @Override public void onShow() {
-        timer = new Timer(1000, new ActionListener() {
-            @Override public void actionPerformed(ActionEvent e) {
-                if (!manager.isGameOver() && !isPaused) {
-                    manager.stepDownOrFix();
-                    updateTimerDelay();
-                } else {
-                    if (timer != null) timer.stop();
-                }
+    // 게임 로직 타이머
+    timer = new Timer(1000, new ActionListener() {
+        @Override public void actionPerformed(ActionEvent e) {
+            if (!manager.isGameOver() && !isPaused) {
+                manager.stepDownOrFix();
+                updateTimerDelay();
+            } else {
+                if (timer != null) timer.stop();
+            }
+        }
+    });
+    
+    // 렌더링 전용 타이머
+    Timer renderTimer = new Timer(16, new ActionListener() { // 16ms = 60FPS
+        @Override public void actionPerformed(ActionEvent e) {
+            if (!isPaused) {
+                manager.updateParticles();
                 app.repaint();
             }
-        });
-        timer.start();
-    }
+        }
+    });
+    
+    timer.start();
+    renderTimer.start();
+}
+
 
     @Override public void onHide() { if (timer != null) timer.stop(); }
 
@@ -190,6 +203,8 @@ public class GameScreen implements Screen {
             }
             int width = app.getWidth();
             manager.renderHUD(g2, padding, blockSize, width);
+            // 파티클 효과 렌더링
+            manager.renderParticles(g2, blockSize);
         } else {
             // GAME OVER
             g2.setColor(Color.RED);
