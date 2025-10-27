@@ -94,8 +94,8 @@ public class NameInputScreen implements Screen {
                 String trimmedName = playerName.toString().trim();
                 String finalName = trimmedName.isEmpty() ? "Anonymous" : trimmedName;
 
-                // 현재 모드로 저장 (클래식/아이템 분리)
-                scoreManager.addScore(mode, finalName, playerScore);
+                // 현재 모드 및 난이도로 저장
+                scoreManager.addScore(mode, app.getSettings().getDifficulty(), finalName, playerScore);
 
                 // 스코어보드는 내부에서 현재 모드로 읽도록 이미 수정했음
                 app.showScreen(new ScoreboardScreen(app, finalName, playerScore, scoreManager));

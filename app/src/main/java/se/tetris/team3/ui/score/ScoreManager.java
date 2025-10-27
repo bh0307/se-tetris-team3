@@ -6,6 +6,7 @@ import java.util.List;
 import java.text.SimpleDateFormat;
 
 import se.tetris.team3.core.GameMode;
+import se.tetris.team3.core.Settings;
 
 // 모드별 파일 분리: classic(.txt), item(.txt.item)
 public class ScoreManager {
@@ -29,25 +30,34 @@ public class ScoreManager {
 
     // 데이터 클래스: 한 개의 점수 기록을 담는 DTO
     public static class ScoreEntry implements Comparable<ScoreEntry> {
-        private String playerName;
-        private int score;
-        private Date date;
+    private String playerName;
+    private int score;
+    private Settings.Difficulty difficulty;
+    private Date date;
 
         public ScoreEntry(String playerName, int score) {
-            this.playerName = playerName;
-            this.score = score;
-            this.date = new Date();
+            this(playerName, score, Settings.Difficulty.NORMAL, new Date());
         }
 
         public ScoreEntry(String playerName, int score, Date date) {
+            this(playerName, score, Settings.Difficulty.NORMAL, date);
+        }
+
+        public ScoreEntry(String playerName, int score, Settings.Difficulty difficulty) {
+            this(playerName, score, difficulty, new Date());
+        }
+
+        public ScoreEntry(String playerName, int score, Settings.Difficulty difficulty, Date date) {
             this.playerName = playerName;
             this.score = score;
+            this.difficulty = (difficulty != null) ? difficulty : Settings.Difficulty.NORMAL;
             this.date = date;
         }
 
-        public String getPlayerName() { return playerName; }
-        public int getScore() { return score; }
-        public Date getDate() { return date; }
+    public String getPlayerName() { return playerName; }
+    public int getScore() { return score; }
+    public Settings.Difficulty getDifficulty() { return difficulty; }
+    public Date getDate() { return date; }
 
         @Override
         public int compareTo(ScoreEntry other) {
@@ -56,7 +66,7 @@ public class ScoreManager {
 
         @Override
         public String toString() {
-            return playerName + "," + score + "," + date.getTime();
+            return playerName + "," + score + "," + difficulty.name() + "," + date.getTime();
         }
 
         public static ScoreEntry fromString(String str) {
@@ -65,8 +75,19 @@ public class ScoreManager {
                 try {
                     String name = parts[0];
                     int score = Integer.parseInt(parts[1]);
-                    Date date = parts.length > 2 ? new Date(Long.parseLong(parts[2])) : new Date();
-                    return new ScoreEntry(name, score, date);
+                    Settings.Difficulty diff = Settings.Difficulty.NORMAL;
+                    Date date = new Date();
+
+                    if (parts.length == 3) {
+                        // 구 포맷: name,score,date
+                        date = new Date(Long.parseLong(parts[2]));
+                    } else if (parts.length >= 4) {
+                        // 신 포맷: name,score,difficulty,date
+                        try { diff = Settings.Difficulty.valueOf(parts[2]); } catch (Exception ignore) {}
+                        try { date = new Date(Long.parseLong(parts[3])); } catch (Exception ignore) { date = new Date(); }
+                    }
+
+                    return new ScoreEntry(name, score, diff, date);
                 } catch (NumberFormatException e) {
                     return null;
                 }
@@ -89,15 +110,20 @@ public class ScoreManager {
     }
 
     // 모드 인식 API
-    public void addScore(GameMode mode, String playerName, int score) {
+    public void addScore(GameMode mode, Settings.Difficulty difficulty, String playerName, int score) {
         // 모드별 점수 목록을 독립적으로 관리하기 위해 매번 로드
         List<ScoreEntry> list = loadForMode(mode);
-        list.add(new ScoreEntry(playerName, score));
+        list.add(new ScoreEntry(playerName, score, difficulty));
         Collections.sort(list);
         if (list.size() > MAX_HIGH_SCORES) {
             list = new ArrayList<>(list.subList(0, MAX_HIGH_SCORES));
         }
         saveForMode(mode, list);
+    }
+
+    // 구 시그니처와 호환: difficulty를 명시하지 않으면 NORMAL로 저장
+    public void addScore(GameMode mode, String playerName, int score) {
+        addScore(mode, Settings.Difficulty.NORMAL, playerName, score);
     }
 
     public boolean isHighScore(GameMode mode, int score) {

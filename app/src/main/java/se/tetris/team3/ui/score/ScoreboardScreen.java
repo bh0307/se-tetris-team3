@@ -1,16 +1,19 @@
 package se.tetris.team3.ui.score;
 
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics2D;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.List;
 
+import se.tetris.team3.core.GameMode;
 import se.tetris.team3.ui.AppFrame;
 import se.tetris.team3.ui.MenuItem;
 import se.tetris.team3.ui.MenuScreen;
 import se.tetris.team3.ui.Screen;
 import se.tetris.team3.ui.score.ScoreManager.ScoreEntry;
-import se.tetris.team3.core.GameMode;
 
 // 스코어보드 화면
 // 현재 Settings의 GameMode를 읽어 모드별 상위 랭킹을 보여줌
@@ -84,7 +87,8 @@ public class ScoreboardScreen implements Screen {
         
         GameMode mode = app.getSettings().getGameMode();
         String modeLabel = (mode == GameMode.ITEM) ? "ITEM" : "CLASSIC";
-        String message = String.format("[%s] YOUR SCORE: %d points", modeLabel, playerScore);
+        String diffLabel = app.getSettings().getDifficulty().name();
+        String message = String.format("[%s/%s] YOUR SCORE: %d points", modeLabel, diffLabel, playerScore);
         
         int messageWidth = g2.getFontMetrics().stringWidth(message);
         g2.drawString(message, (width - messageWidth) / 2, 120);
@@ -97,14 +101,16 @@ public class ScoreboardScreen implements Screen {
         
         int headerY = 180;
         int leftMargin = width / 8;  // 화면 너비의 1/8을 왼쪽 여백으로
-        int nameX = leftMargin + 80;
-        int scoreX = leftMargin + 160;
-        int dateX = leftMargin + 240;
+    int nameX = leftMargin + 80;
+    int scoreX = leftMargin + 160;
+    int diffX = leftMargin + 240;
+    int dateX = leftMargin + 340;
         
         g2.drawString("Rank", leftMargin, headerY);
         g2.drawString("Name", nameX, headerY);
-        g2.drawString("Score", scoreX, headerY);
-        g2.drawString("Date", dateX, headerY);
+    g2.drawString("Score", scoreX, headerY);
+    g2.drawString("Diff", diffX, headerY);
+    g2.drawString("Date", dateX, headerY);
         
         // 헤더 아래 구분선
         g2.drawLine(leftMargin - 10, headerY + 10, width - leftMargin + 10, headerY + 10);
@@ -128,9 +134,11 @@ public class ScoreboardScreen implements Screen {
             }
             
             g2.drawString(String.valueOf(i + 1), leftMargin, rowY);
-            g2.drawString(entry.getPlayerName(), nameX, rowY);
-            g2.drawString(String.valueOf(entry.getScore()), scoreX, rowY);
-            g2.drawString(entry.getFormattedDate(), dateX, rowY);
+            // 열 너비 계산: 다음 열 시작 - 현재 시작 - 여유
+            drawStringEllipsis(g2, entry.getPlayerName(), nameX, rowY, scoreX - nameX - 8);
+            drawStringEllipsis(g2, String.valueOf(entry.getScore()), scoreX, rowY, diffX - scoreX - 8);
+            drawStringEllipsis(g2, entry.getDifficulty().name(), diffX, rowY, dateX - diffX - 8);
+            drawStringEllipsis(g2, entry.getFormattedDate(), dateX, rowY, width - dateX - leftMargin);
         }
     }
     
@@ -186,6 +194,28 @@ public class ScoreboardScreen implements Screen {
             case KeyEvent.VK_ESCAPE -> System.exit(0);
         }
         app.repaint();  // app을 통한 화면 갱신
+    }
+     // 문자열을 주어진 최대 너비에 맞춰 그리고, 넘치면 말줄임표(...)로 대체
+    private void drawStringEllipsis(Graphics2D g2, String text, int x, int y, int maxWidth) {
+        if (text == null) return;
+        FontMetrics fm = g2.getFontMetrics();
+        if (fm.stringWidth(text) <= maxWidth) {
+            g2.drawString(text, x, y);
+            return;
+        }
+
+        String ell = "...";
+        int ellWidth = fm.stringWidth(ell);
+        int avail = Math.max(0, maxWidth - ellWidth);
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < text.length(); i++) {
+            sb.append(text.charAt(i));
+            if (fm.stringWidth(sb.toString()) > avail) {
+                sb.setLength(Math.max(0, sb.length() - 1));
+                break;
+            }
+        }
+        g2.drawString(sb.toString() + ell, x, y);
     }
 
     @Override

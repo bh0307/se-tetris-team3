@@ -2,9 +2,11 @@ package se.tetris.team3.ui;
 
 import java.awt.Color;
 import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.util.Random;
 
+import se.tetris.team3.blocks.AnvilItemBlock;
 import se.tetris.team3.blocks.Block;
 import se.tetris.team3.blocks.IBlock;
 import se.tetris.team3.blocks.JBlock;
@@ -13,8 +15,6 @@ import se.tetris.team3.blocks.OBlock;
 import se.tetris.team3.blocks.SBlock;
 import se.tetris.team3.blocks.TBlock;
 import se.tetris.team3.blocks.ZBlock;
-import se.tetris.team3.blocks.AnvilItemBlock;
-
 import se.tetris.team3.core.GameMode;
 import se.tetris.team3.core.Settings;
 
@@ -94,15 +94,42 @@ public class GameManager {
 
     // 블록 생성
     private Block makeRandomBlock() {
-        return switch (random.nextInt(7)) {
-            case 0 -> new IBlock();
-            case 1 -> new JBlock();
-            case 2 -> new LBlock();
-            case 3 -> new OBlock();
-            case 4 -> new SBlock();
-            case 5 -> new TBlock();
-            default -> new ZBlock();
-        };
+        // Roulette Wheel Selection을 사용한 가중치 기반 블록 선택
+        // 기본 가중치: 다른 블럭들은 10, I형 블럭은 난이도에 따라 +/-20%
+        // EASY: I=12 (+20%), NORMAL: I=10, HARD: I=8 (-20%)
+        int baseWeight = 10;
+        int iWeight;
+        switch (difficulty) {
+            case EASY -> iWeight = (int) Math.round(baseWeight * 1.2);
+            case HARD -> iWeight = (int) Math.round(baseWeight * 0.8);
+            default -> iWeight = baseWeight;
+        }
+
+        // 블록 클래스 배열과 대응되는 가중치 배열
+        java.util.List<Block> types = new java.util.ArrayList<>();
+        java.util.List<Integer> weights = new java.util.ArrayList<>();
+
+        types.add(new IBlock()); weights.add(iWeight);
+        types.add(new JBlock()); weights.add(baseWeight);
+        types.add(new LBlock()); weights.add(baseWeight);
+        types.add(new OBlock()); weights.add(baseWeight);
+        types.add(new SBlock()); weights.add(baseWeight);
+        types.add(new TBlock()); weights.add(baseWeight);
+        types.add(new ZBlock()); weights.add(baseWeight);
+
+        int total = 0;
+        for (int w : weights) total += Math.max(0, w);
+        if (total <= 0) return new IBlock(); // 안전 장치
+
+        int r = random.nextInt(total);
+        int acc = 0;
+        for (int idx = 0; idx < weights.size(); idx++) {
+            acc += Math.max(0, weights.get(idx));
+            if (r < acc) return types.get(idx);
+        }
+
+        // 만약 루프가 끝나면 마지막 타입 반환
+        return types.get(types.size() - 1);
     }
 
     // 새로운 블록 등장
@@ -336,34 +363,41 @@ public class GameManager {
         applyDifficultySettings();
     }
 
-  // HUD: 점수/레벨/난이도/다음블록(줄삭제는 L 문자 표기, 무게추는 전용 모양으로 구분)
-public void renderHUD(Graphics2D g2, int padding, int blockSize) {
+// HUD: 점수/레벨/난이도/다음블록(줄삭제는 L 문자 표기, 무게추는 전용 모양으로 구분)
+public void renderHUD(Graphics2D g2, int padding, int blockSize, int totalWidth) {
     g2.setColor(Color.WHITE);
     g2.setFont(new Font("맑은 고딕", Font.BOLD, 16));
 
     int fieldW = blockSize * 10;           // 보드 폭
     int hudX = padding + fieldW + 16;      // HUD 시작 X 좌표
     int scoreY = padding + 24;             // HUD 첫 Y 좌표
+    int hudWidth = Math.max(120, totalWidth - hudX - padding); // HUD 영역 너비
 
-    // 점수 표시
-    g2.drawString("SCORE: " + score, hudX, scoreY);
+    // 점수 표시 (말줄임 처리)
+    drawStringEllipsis(g2, "SCORE: " + score, hudX, scoreY, hudWidth - 8);
 
     // 레벨 표시
-    g2.drawString("LEVEL: " + level, hudX, scoreY + 24);
+    drawStringEllipsis(g2, "LEVEL: " + level, hudX, scoreY + 24, hudWidth - 8);
 
-    // 난이도 표시
-    g2.drawString("DIFFICULTY: " + difficulty.name(), hudX, scoreY + 48);
+    // 난이도 표시 (한 글자로)
+    String diffLabel = switch (difficulty) {
+        case EASY -> "E";
+        case HARD -> "H";
+        default -> "N";
+    };
+    drawStringEllipsis(g2, "DIFFICULTY: " + diffLabel, hudX, scoreY + 48, hudWidth - 8);
 
     // 다음 블록 표시
     if (nextBlock != null) {
         int[][] shape = nextBlock.getShape();
         Color color = nextBlock.getColor();
 
-        g2.drawString("NEXT:", hudX, scoreY + 72);
+        drawStringEllipsis(g2, "NEXT:", hudX, scoreY + 72, hudWidth - 8);
 
         final boolean cb = (settings != null && settings.isColorBlindMode());
 
-        int cell = Math.max(8, blockSize / 2); // 최소 셀 크기 8
+        // 다음 블록을 그릴 가로 영역을 hudWidth로 제한
+        int cell = Math.max(8, Math.min(blockSize / 2, (hudWidth - 8) / 4)); // 최대 4열 보이도록 조정
         Integer ir = null, ic = null;
 
         // 다음 블록이 줄삭제 아이템(L)인 경우 위치 조회
@@ -375,7 +409,6 @@ public void renderHUD(Graphics2D g2, int padding, int blockSize) {
         }
 
         // 다음 블록 그리기
-        
         for (int r = 0; r < shape.length; r++) {
             for (int c = 0; c < shape[r].length; c++) {
                 if (shape[r][c] != 0) {
@@ -390,10 +423,33 @@ public void renderHUD(Graphics2D g2, int padding, int blockSize) {
                     if (nextBlock.getItemType() == 'L' && ir != null && ic != null && r == ir && c == ic) {
                         GameScreen.drawCenteredChar(g2, x, y, cell, 'L');
                     }
-                 }
-             }
-         }
-    
-     }
+                }
+            }
+        }
+
+    }
  }
+
+// 문자열을 주어진 최대 너비에 맞춰 그리고, 넘치면 말줄임표(...)로 대체
+private void drawStringEllipsis(Graphics2D g2, String text, int x, int y, int maxWidth) {
+    if (text == null) return;
+    FontMetrics fm = g2.getFontMetrics();
+    if (fm.stringWidth(text) <= maxWidth) {
+        g2.drawString(text, x, y);
+        return;
+    }
+
+    String ell = "...";
+    int ellWidth = fm.stringWidth(ell);
+    int avail = Math.max(0, maxWidth - ellWidth);
+    StringBuilder sb = new StringBuilder();
+    for (int i = 0; i < text.length(); i++) {
+        sb.append(text.charAt(i));
+        if (fm.stringWidth(sb.toString()) > avail) {
+            sb.setLength(Math.max(0, sb.length() - 1));
+            break;
+        }
+    }
+    g2.drawString(sb.toString() + ell, x, y);
+}
 }
