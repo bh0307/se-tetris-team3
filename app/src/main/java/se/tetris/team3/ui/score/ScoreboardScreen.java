@@ -70,7 +70,9 @@ public class ScoreboardScreen implements Screen {
         g2.setColor(Color.BLACK);
         g2.setFont(new Font("Monospaced", Font.BOLD, 24));
         
-        String title = "TOP 10";
+        GameMode mode = app.getSettings().getGameMode();
+        String modeLabel = (mode == GameMode.ITEM) ? "ITEM MODE" : "CLASSIC MODE";
+        String title = "TOP 10 - " + modeLabel;
 
         int titleWidth = g2.getFontMetrics().stringWidth(title);
         g2.drawString(title, (width - titleWidth) / 2, 80);
@@ -80,9 +82,11 @@ public class ScoreboardScreen implements Screen {
         g2.setColor(Color.BLUE);
         g2.setFont(new Font("Monospaced", Font.BOLD, 14));
         
-        String message = String.format(SCORE_FORMAT_MESSAGE, playerScore);
-        int messageWidth = g2.getFontMetrics().stringWidth(message);
+        GameMode mode = app.getSettings().getGameMode();
+        String modeLabel = (mode == GameMode.ITEM) ? "ITEM" : "CLASSIC";
+        String message = String.format("[%s] YOUR SCORE: %d points", modeLabel, playerScore);
         
+        int messageWidth = g2.getFontMetrics().stringWidth(message);
         g2.drawString(message, (width - messageWidth) / 2, 120);
     }
     

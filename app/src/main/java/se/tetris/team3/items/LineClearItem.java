@@ -7,7 +7,7 @@ public class LineClearItem implements Item {
 
     @Override
     public void onLock(GameManager gm) {
-        gm.forceClearRowAtItem();
+        gm.applyLineClearItem();
     }
 
     @Override

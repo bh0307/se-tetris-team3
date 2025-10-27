@@ -188,7 +188,10 @@ public class GameManager {
             for (int j = 0; j < s[i].length; j++)
                 if (s[i][j] != 0) field[blockY + i][blockX + j] = 1;
 
-        score += 10;
+        // 무게추는 고정 시 점수 부여하지 않음
+        if (!(currentBlock instanceof AnvilItemBlock)) {
+            score += 10;
+        }
 
         if (currentBlock instanceof AnvilItemBlock) weightLocked = true;
 
@@ -203,7 +206,7 @@ public class GameManager {
     }
 
     // 아이템 '라인 제거' 적용
-    private void applyLineClearItem() {
+    public void applyLineClearItem() {
         int rLocal = -1;
         try { rLocal = (int) currentBlock.getClass().getMethod("getItemRow").invoke(currentBlock); } 
         catch (Exception ignore) {}
@@ -219,27 +222,38 @@ public class GameManager {
         if (mode == GameMode.ITEM && linesClearedTotal % 10 == 0) pendingItem = true;
     }
 
-    // 무게 블록 효과: 아래 블록 제거
-    private void activateWeightEffect() {
-        int startX = anvilStartX();
-        int endX = startX + ANVIL_WIDTH - 1;
-        for (int x = startX; x <= endX; x++)
-            for (int y = FIELD_HEIGHT - 1; y >= 0; y--)
+    // 무게 블록 효과: 충돌 순간 아래 블록 제거
+    public void activateWeightEffectAt(int startX, int startY) {
+        int sX = Math.max(0, Math.min(startX, FIELD_WIDTH - ANVIL_WIDTH));
+        int endX = sX + ANVIL_WIDTH - 1;
+        int sY = Math.max(0, startY);
+
+        for (int x = sX; x <= endX; x++) {
+            for (int y = sY; y < FIELD_HEIGHT; y++) {
                 if (field[y][x] == 1) field[y][x] = 0;
+            }
+        }
     }
 
-    private int anvilStartX() {
-        int center = blockX + currentBlock.width() / 2;
-        int start = center - ANVIL_WIDTH / 2;
-        return Math.max(0, Math.min(start, FIELD_WIDTH - ANVIL_WIDTH));
+    // 충돌한 지점을 추정(블록을 y+1로 내리다 실패했을 때의 첫 접촉 셀)
+    private int[] findFirstContactCell(int x, int y, int[][] shape) {
+        for (int i = 0; i < shape.length; i++) {
+            for (int j = 0; j < shape[i].length; j++) {
+                if (shape[i][j] != 0) {
+                    int fx = x + j;
+                    int fy = y + i;
+                    if (fy >= FIELD_HEIGHT) return new int[]{Math.max(0, Math.min(fx, FIELD_WIDTH - 1)), FIELD_HEIGHT - 1};
+                    if (fy >= 0 && fx >= 0 && fx < FIELD_WIDTH && field[fy][fx] == 1) {
+                        return new int[]{fx, fy};
+                    }
+                }
+            }
+        }
+        return null;
     }
-
-    // 외부에서 호출할 아이템 관련 메서드
-    public void destroyBlocksBelow() { activateWeightEffect(); }
-    public void forceClearRowAtItem() { applyLineClearItem(); }
-
-    // 완전한 줄 제거
-    public void clearLines() {
+    
+     // 라인 제거 함수(무게추일 경우 점수 미집계)
+    public void clearLines(boolean awardScore) {
         int lines = 0;
         for (int i = FIELD_HEIGHT - 1; i >= 0; i--) {
             boolean full = true;
@@ -252,21 +266,50 @@ public class GameManager {
             }
         }
         if (lines > 0) {
-            score += Math.round(lines * 100 * scoreMultiplier);
+            if (awardScore) score += Math.round(lines * 100 * scoreMultiplier);
             linesClearedTotal += lines;
             if (linesClearedTotal / 10 > level - 1) level = linesClearedTotal / 10 + 1;
             speedUp = (level > 1);
             if (mode == GameMode.ITEM && linesClearedTotal % 10 == 0) pendingItem = true;
         }
     }
+    public void clearLines() { clearLines(true); }
 
     // 블록 한 칸 아래로 이동 또는 고정
     public void stepDownOrFix() {
-        if (currentBlock instanceof AnvilItemBlock) activateWeightEffect();
+        // 이동 중에는 무게추 효과를 받지 않음
+        int nextY = blockY + 1;
 
-        if (!tryMove(blockX, blockY + 1)) {
+        if (!tryMove(blockX, nextY)) {
+            boolean isAnvil = (currentBlock instanceof AnvilItemBlock);
+
+            if (isAnvil) {
+                int[] contact = findFirstContactCell(blockX, nextY, currentBlock.getShape());
+                int contactY = (contact != null) ? contact[1] : blockY;
+                int startX = Math.max(0, Math.min(blockX, FIELD_WIDTH - ANVIL_WIDTH));
+                activateWeightEffectAt(startX, contactY);
+
+                // 천천히 아래로 떨어지게
+                new Thread(() -> {
+                    try {
+                        while (!isCollision(blockX, blockY + 1, currentBlock.getShape())) {
+                            blockY++;
+                            Thread.sleep(40); // 낙하 속도 (조절 가능)
+                        }
+                        fixBlock();
+                        clearLines(false); // 무게추는 점수 없음
+                        spawnNewBlock();
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                }).start();
+
+                return; // 아래 일반 고정 로직은 건너뜀
+            }
+
+
             fixBlock();
-            clearLines();
+            clearLines(!isAnvil);  // 무게추는 점수 반영 안 함
             spawnNewBlock();
         } else {
             score += Math.round((1 + (level - 1) * 5) * scoreMultiplier);

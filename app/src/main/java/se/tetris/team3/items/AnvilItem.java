@@ -10,7 +10,7 @@ public class AnvilItem implements Item {
     @Override
     public void onFalling(GameManager gm) {
         // 하강하며 아래 열의 블럭들을 삭제
-        gm.destroyBlocksBelow();
+        gm.activateWeightEffectAt(gm.getBlockX(), gm.getBlockY());
     }
 
     @Override

@@ -221,8 +221,15 @@ public class GameScreen implements Screen {
         int[][] shape = (cur != null ? cur.getShape() : null);
 
         if (manager.isGameOver()) {
-            if (new ScoreManager().isHighScore(manager.getMode(), manager.getScore())) {
-                app.showScreen(new NameInputScreen(app, manager.getScore()));
+            ScoreManager sm = new ScoreManager();
+            var mode = manager.getMode();
+            var score = manager.getScore();
+
+            // 최고 점수이면 이름 입력 화면으로
+            if (sm.isHighScore(mode, score)) {
+                // 기존: app.showScreen(new NameInputScreen(app, manager.getScore()));
+                // 수정: 모드 포함 버전
+                app.showScreen(new NameInputScreen(app, mode, score));
             }
             return;
         }
