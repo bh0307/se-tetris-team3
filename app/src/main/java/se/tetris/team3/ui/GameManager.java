@@ -52,6 +52,9 @@ public class GameManager {
 
     private Settings settings;
 
+    // 블록 제거 시 발생하는 파티클
+    private java.util.List<Particle> particles = new java.util.ArrayList<>();
+
     // 생성자
     public GameManager() { this(GameMode.CLASSIC); }
 
@@ -230,10 +233,21 @@ public class GameManager {
 
     // 한 줄 제거
     private void clearRow(int row) {
-        if (row < 0 || row >= FIELD_HEIGHT) return;
-        for (int y = row; y > 0; y--) System.arraycopy(field[y - 1], 0, field[y], 0, FIELD_WIDTH);
-        for (int x = 0; x < FIELD_WIDTH; x++) field[0][x] = 0;
+    if (row < 0 || row >= FIELD_HEIGHT) return;
+    
+    // 파티클 효과 생성 - 사라지는 블록들에서 파티클 방출
+    for (int x = 0; x < FIELD_WIDTH; x++) {
+        if (field[row][x] == 1) {
+            addBreakEffect(x, row);
+        }
     }
+    
+    // 실제 줄 삭제
+    for (int y = row; y > 0; y--) {
+        System.arraycopy(field[y - 1], 0, field[y], 0, FIELD_WIDTH);
+    }
+    for (int x = 0; x < FIELD_WIDTH; x++) field[0][x] = 0;
+}
 
     // 아이템 '라인 제거' 적용
     public void applyLineClearItem() {
@@ -249,7 +263,7 @@ public class GameManager {
         score += 100;
         linesClearedTotal++;
 
-        if (mode == GameMode.ITEM && linesClearedTotal % 10 == 0) pendingItem = true;
+        if (mode == GameMode.ITEM && linesClearedTotal % 3 == 0) pendingItem = true;
     }
 
     // 무게 블록 효과: 충돌 순간 아래 블록 제거
@@ -260,7 +274,10 @@ public class GameManager {
 
         for (int x = sX; x <= endX; x++) {
             for (int y = sY; y < FIELD_HEIGHT; y++) {
-                if (field[y][x] == 1) field[y][x] = 0;
+                if (field[y][x] == 1) {
+                    addBreakEffect(x,y);
+                    field[y][x] = 0;
+                }
             }
         }
     }
@@ -290,8 +307,7 @@ public class GameManager {
             for (int j = 0; j < FIELD_WIDTH; j++) if (field[i][j] == 0) { full = false; break; }
             if (full) {
                 lines++;
-                for (int k = i; k > 0; k--) System.arraycopy(field[k - 1], 0, field[k], 0, FIELD_WIDTH);
-                for (int j = 0; j < FIELD_WIDTH; j++) field[0][j] = 0;
+                clearRow(i);
                 i++;
             }
         }
@@ -300,7 +316,7 @@ public class GameManager {
             linesClearedTotal += lines;
             if (linesClearedTotal / 10 > level - 1) level = linesClearedTotal / 10 + 1;
             speedUp = (level > 1);
-            if (mode == GameMode.ITEM && linesClearedTotal % 10 == 0) pendingItem = true;
+            if (mode == GameMode.ITEM && linesClearedTotal % 2 == 0) pendingItem = true;
         }
     }
     public void clearLines() { clearLines(true); }
@@ -451,5 +467,96 @@ private void drawStringEllipsis(Graphics2D g2, String text, int x, int y, int ma
         }
     }
     g2.drawString(sb.toString() + ell, x, y);
+}
+private static class Particle {
+    float x, y;           // 위치
+    float vx, vy;         // 속도
+    Color color;          // 색상
+    int life;             // 생명력 (프레임)
+    int maxLife;          // 최대 생명력
+    
+    public Particle(float x, float y, Color color, float vx, float vy) {
+        this.x = x;
+        this.y = y;
+        this.color = color;
+        this.vx = vx;
+        this.vy = vy;
+        this.maxLife = 30 + (int)(Math.random() * 20); // 30~50 프레임
+        this.life = maxLife;
+    }
+    
+    public void update() {
+        x += vx;
+        y += vy;
+        vy += 0.2f; // 중력
+        vx *= 0.98f; // 공기 저항
+        life--;
+    }
+    
+    public boolean isDead() {
+        return life <= 0;
+    }
+    
+    public void render(Graphics2D g2, int blockSize) {
+        if (isDead()) return;
+        
+        // 생명력에 따라 투명도 조절
+        float alpha = (float)life / maxLife;
+        Color fadeColor = new Color(
+            color.getRed(), 
+            color.getGreen(), 
+            color.getBlue(), 
+            (int)(255 * alpha)
+        );
+        
+        g2.setColor(fadeColor);
+        int size = Math.max(1, (int)(4 * alpha));
+        g2.fillOval((int)x, (int)y, size, size);
+    }
+}
+
+public void updateParticles() {
+    // 파티클 업데이트 및 죽은 파티클 제거
+    particles.removeIf(particle -> {
+        particle.update();
+        return particle.isDead();
+    });
+}
+
+public void renderParticles(Graphics2D g2, int blockSize) {
+    for (Particle particle : particles) {
+        particle.render(g2, blockSize);
+    }
+}
+
+// 블록 파괴 효과 생성
+private void addBreakEffect(int gridX, int gridY) {
+    float centerX = gridX * 30 + 15;
+    float centerY = gridY * 30 + 15;
+    Color blockColor = Color.LIGHT_GRAY;
+    
+    // 8~12개의 파티클 생성
+    int particleCount = 8 + (int)(Math.random() * 5);
+    
+    for (int i = 0; i < particleCount; i++) {
+        // 랜덤한 방향과 속도
+        float angle = (float)(Math.random() * 2 * Math.PI);
+        float speed = 2 + (float)(Math.random() * 4); // 2~6 픽셀/프레임
+        
+        float vx = (float)(Math.cos(angle) * speed);
+        float vy = (float)(Math.sin(angle) * speed) - 1; // 약간 위로 튀어오르게
+        
+        // 블록 중심에서 약간씩 다른 위치에서 시작
+        float offsetX = -8 + (float)(Math.random() * 16);
+        float offsetY = -8 + (float)(Math.random() * 16);
+        
+        particles.add(new Particle(
+            centerX + offsetX, 
+            centerY + offsetY, 
+            blockColor, 
+            vx, 
+            vy
+        ));
+    }
 }
 }
