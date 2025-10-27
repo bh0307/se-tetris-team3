@@ -11,20 +11,21 @@ import se.tetris.team3.ui.score.ScoreboardScreen;
 
 public class NameInputScreen implements Screen {
     private final AppFrame app;
+    private final GameMode mode;
     private final int playerScore;
-    private StringBuilder playerName;
+    private final StringBuilder playerName = new StringBuilder();
     private static final int MAX_NAME_LENGTH = 10;
 
     private static final ScoreManager scoreManager = new ScoreManager();
 
-    public NameInputScreen(AppFrame app) {
-        this(app, 0);
+    public NameInputScreen(AppFrame app, int playerScore) {
+        this(app, app.getSettings().getGameMode(), playerScore);
     }
 
-    public NameInputScreen(AppFrame app, int playerScore) {
+    public NameInputScreen(AppFrame app, GameMode mode, int playerScore) {
         this.app = app;
+        this.mode = mode;
         this.playerScore = playerScore;
-        this.playerName = new StringBuilder();
     }
 
     @Override
@@ -94,7 +95,6 @@ public class NameInputScreen implements Screen {
                 String finalName = trimmedName.isEmpty() ? "Anonymous" : trimmedName;
 
                 // 현재 모드로 저장 (클래식/아이템 분리)
-                GameMode mode = app.getSettings().getGameMode();
                 scoreManager.addScore(mode, finalName, playerScore);
 
                 // 스코어보드는 내부에서 현재 모드로 읽도록 이미 수정했음
