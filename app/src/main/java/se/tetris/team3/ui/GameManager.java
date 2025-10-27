@@ -50,6 +50,8 @@ public class GameManager {
     private int baseFallDelay = 500; // 기본 낙하 딜레이(ms)
     private double scoreMultiplier = 1.0;
 
+    private Settings settings;
+
     // 생성자
     public GameManager() { this(GameMode.CLASSIC); }
 
@@ -62,6 +64,7 @@ public class GameManager {
     // 설정 객체 적용
     public void attachSettings(Settings settings) {
         if (settings != null) {
+            this.settings = settings;
             difficulty = settings.getDifficulty();
             applyDifficultySettings();
             if (settings.getGameMode() != null) this.mode = settings.getGameMode();
@@ -315,6 +318,8 @@ public void renderHUD(Graphics2D g2, int padding, int blockSize) {
 
         g2.drawString("NEXT:", hudX, scoreY + 72);
 
+        final boolean cb = (settings != null && settings.isColorBlindMode());
+
         int cell = Math.max(8, blockSize / 2); // 최소 셀 크기 8
         Integer ir = null, ic = null;
 
@@ -327,21 +332,25 @@ public void renderHUD(Graphics2D g2, int padding, int blockSize) {
         }
 
         // 다음 블록 그리기
+        
         for (int r = 0; r < shape.length; r++) {
             for (int c = 0; c < shape[r].length; c++) {
                 if (shape[r][c] != 0) {
                     int x = hudX + c * cell;
                     int y = scoreY + 88 + r * cell;
+                    /*
                     g2.setColor(color);
                     g2.fillRect(x, y, cell - 1, cell - 1);
-
+                    */
+                    PatternPainter.drawCell(g2, x, y, cell - 1, color, nextBlock, cb);
                     // L 아이템은 문자 표시
                     if (nextBlock.getItemType() == 'L' && ir != null && ic != null && r == ir && c == ic) {
                         GameScreen.drawCenteredChar(g2, x, y, cell, 'L');
-                     }
+                    }
                  }
              }
          }
+    
      }
  }
 }
