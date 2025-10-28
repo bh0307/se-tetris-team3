@@ -60,6 +60,11 @@ public class GameManager {
     // 블록 제거 시 발생하는 파티클
     private java.util.List<Particle> particles = new java.util.ArrayList<>();
 
+    // T 아이템 느린 모드 상태
+    private boolean slowModeActive = false;
+    private long slowModeEndTime = 0;
+    private static final long SLOW_MODE_DURATION = 10000; // 10초
+
     // 생성자
     public GameManager() { 
         this(GameMode.CLASSIC); 
@@ -172,6 +177,7 @@ public class GameManager {
             if(randomItem==0){  // 무게추 아이템
                 candidate = new AnvilItemBlock();
                 candidate.setItemType((char)0);
+                pendingItem = false;
             } else {
                 candidate = makeRandomBlock();
                 java.util.List<int[]> ones = new java.util.ArrayList<>();
@@ -201,7 +207,7 @@ public class GameManager {
                                     .invoke(candidate, pick[0], pick[1]);
                         } catch (Exception ignore) {}
                     }
-            pendingItem = false;
+                pendingItem = false;
             }
             
         } else {
@@ -479,14 +485,52 @@ public class GameManager {
         speedUp = false;
         pendingItem = false;
         weightLocked = false;
+        
+        // 느린 모드 초기화
+        slowModeActive = false;
+        slowModeEndTime = 0;
 
         applyDifficultySettings();
     }
 
     // T 아이템 효과: 시간 느리게 하기
     private void activateTimeSlowItem() {
-        // TODO: T 아이템 효과 구현
-        System.out.println("T 아이템 효과 발동!");
+        slowModeActive = true;
+        slowModeEndTime = System.currentTimeMillis() + SLOW_MODE_DURATION;
+    }
+    
+    // 느린 모드 상태 체크 및 업데이트
+    public void updateSlowMode() {
+        if (slowModeActive && System.currentTimeMillis() >= slowModeEndTime) {
+            slowModeActive = false;
+        }
+    }
+    
+    // 게임 타이머 딜레이 계산 (느린 모드 적용)
+    public int getGameTimerDelay() {
+        // 기본 딜레이 계산
+        int base = baseFallDelay;
+        int lvl = Math.max(1, level);
+        int delay = Math.max(50, base - (lvl - 1) * 100);
+        
+        // 느린 모드가 활성화되면 속도를 절반(딜레이 2배)으로
+        if (slowModeActive) {
+            delay *= 2;
+        }
+        
+        return delay;
+    }
+    
+    // 느린 모드 상태 확인
+    public boolean isSlowModeActive() {
+        return slowModeActive;
+    }
+    
+    // 느린 모드 남은 시간 (초 단위)
+    public int getSlowModeRemainingTime() {
+        if (!slowModeActive) return 0;
+        long remaining = slowModeEndTime - System.currentTimeMillis();
+        return Math.max(0, (int)(remaining / 1000));
     }
     
     // 아이템 정보 접근 메서드들
@@ -529,13 +573,6 @@ public void renderHUD(Graphics2D g2, int padding, int blockSize, int totalWidth)
     };
     drawStringEllipsis(g2, "DIFFICULTY: " + diffLabel, hudX, scoreY + lineSpacing * 2, hudWidth - 8);
 
-    // I-only 모드 남은 시간 표시
-    if (iOnlyModeActive) {
-        long rem = Math.max(0, iOnlyModeEndMillis - System.currentTimeMillis());
-        String remS = String.format("I-MODE: %ds", (rem + 999) / 1000);
-        drawStringEllipsis(g2, remS, hudX, scoreY + lineSpacing * 3, hudWidth - 8);
-    }
-
     // 다음 블록 표시
     if (nextBlock != null) {
         int[][] shape = nextBlock.getShape();
@@ -559,11 +596,12 @@ public void renderHUD(Graphics2D g2, int padding, int blockSize, int totalWidth)
         }
 
         // 다음 블록 그리기
+        int nextBlockStartY = scoreY + lineSpacing * 4 + 20;
         for (int r = 0; r < shape.length; r++) {
             for (int c = 0; c < shape[r].length; c++) {
                 if (shape[r][c] != 0) {
                     int x = hudX + c * cell;
-                    int y = scoreY + 88 + r * cell;
+                    int y = nextBlockStartY + r * cell;
                     /*
                     g2.setColor(color);
                     g2.fillRect(x, y, cell - 1, cell - 1);
@@ -577,6 +615,22 @@ public void renderHUD(Graphics2D g2, int padding, int blockSize, int totalWidth)
             }
         }
 
+    }
+    
+    // 느린 모드 표시 남은 시간 표시
+    if (slowModeActive) {
+        g2.setColor(Color.CYAN);
+        int remaining = getSlowModeRemainingTime();
+        drawStringEllipsis(g2, "SLOW: " + remaining + "s", hudX, scoreY + 180, hudWidth - 8);
+    }
+    
+    // I-only 모드 남은 시간 표시
+    if (iOnlyModeActive) {
+        long rem = Math.max(0, iOnlyModeEndMillis - System.currentTimeMillis());
+        String remS = String.format("I-MODE: %ds", (rem + 999) / 1000);
+        int yPos = slowModeActive ? scoreY + 204 : scoreY + 180; // SLOW MODE 있으면 그 아래, 없으면 같은 위치
+        g2.setColor(Color.YELLOW);
+        drawStringEllipsis(g2, remS, hudX, yPos, hudWidth - 8);
     }
  }
 
