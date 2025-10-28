@@ -166,6 +166,12 @@ public class GameScreen implements Screen {
                     int x = padding + c * blockSize;
                     int y = padding + r * blockSize;
                     PatternPainter.drawCell(g2, x, y, blockSize, Color.GRAY, null, settings.isColorBlindMode());
+                    
+                    // 고정된 블록에 아이템이 있으면 글자 표시
+                    if (manager.hasItem(r, c)) {
+                        char itemType = manager.getItemType(r, c);
+                        drawCenteredChar(g2, x, y, blockSize, itemType);
+                    }
                 }
             }
         }
@@ -180,7 +186,7 @@ public class GameScreen implements Screen {
 
                 // L 위치 (있을 때만 사용)
                 Integer ir = null, ic = null;
-                if (cur.getItemType() == 'L') {
+                if (cur.getItemType() != 0) {
                     try {
                         ir = (Integer) cur.getClass().getMethod("getItemRow").invoke(cur);
                         ic = (Integer) cur.getClass().getMethod("getItemCol").invoke(cur);
@@ -197,8 +203,8 @@ public class GameScreen implements Screen {
                                 PatternPainter.drawCell(g2, x, y, blockSize, base, cur, settings.isColorBlindMode());
 
                                 // ★ 줄삭제 L은 붙은 칸에만 문자 오버레이(무게추는 글자 없음)
-                                if (cur.getItemType() == 'L' && ir != null && ic != null && r == ir && c == ic) {
-                                    drawCenteredChar(g2, x, y, blockSize, 'L');
+                                if (cur.getItemType() != 0 && ir != null && ic != null && r == ir && c == ic) {
+                                    drawCenteredChar(g2, x, y, blockSize, cur.getItemType());
                                 }
                             }
                         }
