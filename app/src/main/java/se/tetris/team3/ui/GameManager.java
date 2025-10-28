@@ -53,6 +53,10 @@ public class GameManager {
 
     private Settings settings;
 
+    // I-only 모드: 일정 시간 동안 I형 블록만 생성
+    private boolean iOnlyModeActive = false;
+    private long iOnlyModeEndMillis = 0L;
+
     // 블록 제거 시 발생하는 파티클
     private java.util.List<Particle> particles = new java.util.ArrayList<>();
 
@@ -108,6 +112,14 @@ public class GameManager {
 
     // 블록 생성
     private Block makeRandomBlock() {
+        // I-only 모드가 활성화되어 있으면 남은 시간 동안 I블록만 반환
+        if (iOnlyModeActive) {
+            if (System.currentTimeMillis() > iOnlyModeEndMillis) {
+                iOnlyModeActive = false;
+            } else {
+                return new IBlock();
+            }
+        }
         // Roulette Wheel Selection을 사용한 가중치 기반 블록 선택
         // 기본 가중치: 다른 블럭들은 10, I형 블럭은 난이도에 따라 +/-20%
         // EASY: I=12 (+20%), NORMAL: I=10, HARD: I=8 (-20%)
@@ -170,8 +182,8 @@ public class GameManager {
                 case 2: // 블럭 느리게 떨어지기 아이템
                     candidate.setItemType('T');
                     break;
-                case 3: // 일정 시간 ㅣ 모양 아이템
-                    candidate.setItemType('3');
+                case 3: // 일정 시간 I형만 등장 아이템
+                    candidate.setItemType('I');
                     break;
                 default: // 일정 시간 점수 2배
                     candidate.setItemType('4');
@@ -278,7 +290,13 @@ public class GameManager {
 
         if (currentBlock instanceof AnvilItemBlock) weightLocked = true;
 
-        if (mode == GameMode.ITEM && currentBlock.getItemType() == 'L') applyLineClearItem();
+        // 아이템 모드 전용 라인클리어 아이템 발동 처리
+        if (mode == GameMode.ITEM) {
+            char it = currentBlock.getItemType();
+            if (it == 'L') {
+                applyLineClearItem();
+            }
+        }
     }
 
     // 한 줄 제거
@@ -288,9 +306,13 @@ public class GameManager {
     // 파티클 효과 생성 및 T 아이템 체크
     for (int x = 0; x < FIELD_WIDTH; x++) {
         if (field[row][x] == 1) {
-            // T 아이템이 있는 블록이 깨지면 아이템 효과 실행
-            if (itemField[row][x] == 'T') {
+            // T 아이템이나 I 아이템이 있는 블록이 깨지면 아이템 효과 실행
+            char itemType = itemField[row][x];
+            if (itemType == 'T') {
                 activateTimeSlowItem();
+            } else if (itemType == 'I') {
+                // I-only 모드 10초 발동
+                activateIOnlyMode(10000);
             }
             
             addBreakEffect(x, row);
@@ -337,9 +359,13 @@ public class GameManager {
         for (int x = sX; x <= endX; x++) {
             for (int y = sY; y < FIELD_HEIGHT; y++) {
                 if (field[y][x] == 1) {
-                    // T 아이템이 있는 블록이 무게추로 깨지면 아이템 효과 실행
-                    if (itemField[y][x] == 'T') {
+                    // T 아이템이나 I 아이템이 있는 블록이 무게추로 깨지면 아이템 효과 실행
+                    char itemType = itemField[y][x];
+                    if (itemType == 'T') {
                         activateTimeSlowItem();
+                    } else if (itemType == 'I') {
+                        // I-only 모드 10초 발동
+                        activateIOnlyMode(10000);
                     }
                     
                     addBreakEffect(x,y);
@@ -476,33 +502,47 @@ public class GameManager {
 // HUD: 점수/레벨/난이도/다음블록(줄삭제는 L 문자 표기, 무게추는 전용 모양으로 구분)
 public void renderHUD(Graphics2D g2, int padding, int blockSize, int totalWidth) {
     g2.setColor(Color.WHITE);
-    g2.setFont(new Font("맑은 고딕", Font.BOLD, 16));
-
+    
     int fieldW = blockSize * 10;           // 보드 폭
     int hudX = padding + fieldW + 16;      // HUD 시작 X 좌표
-    int scoreY = padding + 24;             // HUD 첫 Y 좌표
     int hudWidth = Math.max(120, totalWidth - hudX - padding); // HUD 영역 너비
+    
+    // 폰트 크기를 화면 크기에 맞춰 동적 조절
+    int baseFontSize = Math.max(12, Math.min(24, blockSize / 2)); // 최소 12, 최대 24
+    g2.setFont(new Font("맑은 고딕", Font.BOLD, baseFontSize));
+    
+    // 행간도 폰트 크기에 맞춰 동적 조절
+    int lineSpacing = (int)(baseFontSize * 1.5);
+    int scoreY = padding + lineSpacing;
 
     // 점수 표시 (말줄임 처리)
     drawStringEllipsis(g2, "SCORE: " + score, hudX, scoreY, hudWidth - 8);
 
     // 레벨 표시
-    drawStringEllipsis(g2, "LEVEL: " + level, hudX, scoreY + 24, hudWidth - 8);
+    drawStringEllipsis(g2, "LEVEL: " + level, hudX, scoreY + lineSpacing, hudWidth - 8);
 
-    // 난이도 표시 (한 글자로)
+    // 난이도 표시 (전체 이름으로)
     String diffLabel = switch (difficulty) {
-        case EASY -> "E";
-        case HARD -> "H";
-        default -> "N";
+        case EASY -> "EASY";
+        case HARD -> "HARD";
+        default -> "NORMAL";
     };
-    drawStringEllipsis(g2, "DIFFICULTY: " + diffLabel, hudX, scoreY + 48, hudWidth - 8);
+    drawStringEllipsis(g2, "DIFFICULTY: " + diffLabel, hudX, scoreY + lineSpacing * 2, hudWidth - 8);
+
+    // I-only 모드 남은 시간 표시
+    if (iOnlyModeActive) {
+        long rem = Math.max(0, iOnlyModeEndMillis - System.currentTimeMillis());
+        String remS = String.format("I-MODE: %ds", (rem + 999) / 1000);
+        drawStringEllipsis(g2, remS, hudX, scoreY + lineSpacing * 3, hudWidth - 8);
+    }
 
     // 다음 블록 표시
     if (nextBlock != null) {
         int[][] shape = nextBlock.getShape();
         Color color = nextBlock.getColor();
 
-        drawStringEllipsis(g2, "NEXT:", hudX, scoreY + 72, hudWidth - 8);
+        // NEXT 라벨은 iOnlyMode 상태와 관계없이 항상 같은 위치에 표시
+        drawStringEllipsis(g2, "NEXT:", hudX, scoreY + lineSpacing * 4, hudWidth - 8);
 
         final boolean cb = (settings != null && settings.isColorBlindMode());
 
@@ -616,6 +656,14 @@ public void updateParticles() {
         return particle.isDead();
     });
 }
+
+    // I-only 모드 활성화: 지정된 밀리초 동안 I형 블록만 생성
+    public void activateIOnlyMode(int milliseconds) {
+        if (mode != GameMode.ITEM) return; // 아이템 모드에서만 동작
+        iOnlyModeActive = true;
+        iOnlyModeEndMillis = System.currentTimeMillis() + Math.max(0, milliseconds);
+        System.out.println("[GameManager] I-only mode activated for " + milliseconds + " ms");
+    }
 
 public void renderParticles(Graphics2D g2, int blockSize) {
     for (Particle particle : particles) {
