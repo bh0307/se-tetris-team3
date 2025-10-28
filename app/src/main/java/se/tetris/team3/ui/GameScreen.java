@@ -64,7 +64,11 @@ public class GameScreen implements Screen {
     @Override public void onHide() { if (timer != null) timer.stop(); }
 
     private void updateTimerDelay() {
-        int delay = Math.max(100, 1000 - (manager.getLevel() - 1) * 100);
+        // GameManager에서 설정된 난이도 기반 기본 낙하 딜레이를 사용
+        int base = manager.getBaseFallDelay();
+        int lvl = Math.max(1, manager.getLevel());
+        // 레벨이 올라갈수록 delay를 줄임 (레벨당 100ms 감소). 최소값은 50ms로 제한.
+        int delay = Math.max(50, base - (lvl - 1) * 100);
         timer.setDelay(delay);
     }
 

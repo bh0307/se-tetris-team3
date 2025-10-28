@@ -93,6 +93,8 @@ public class GameManager {
     public boolean isGameOver() { return isGameOver; }
     public int getScore() { return score; }
     public int getLevel() { return level; }
+    // 난이도 기반 기본 낙하 딜레이 접근자
+    public int getBaseFallDelay() { return baseFallDelay; }
     public boolean isSpeedUp() { return speedUp; }
 
     // 블록 생성
