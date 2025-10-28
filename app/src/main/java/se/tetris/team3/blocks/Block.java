@@ -35,8 +35,8 @@ public abstract class Block {
         }
         shape = rotated;
 
-        // L이 붙어 있으면 좌표를 같이 회전 (r,c) -> (c, rows-1-r)
-        if (itemType == 'L' && itemRow >= 0 && itemCol >= 0) {
+        // 아이템이 붙어 있으면 좌표를 같이 회전 (r,c) -> (c, rows-1-r)
+        if (itemType != 0 && itemRow >= 0 && itemCol >= 0) {
             int newRow = itemCol;
             int newCol = rows - 1 - itemRow; // 주의: rows는 "회전 전" 높이
             itemRow = newRow;

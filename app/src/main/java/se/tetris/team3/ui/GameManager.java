@@ -28,6 +28,7 @@ public class GameManager {
     private final Random random = new Random();
 
     private int[][] field = new int[FIELD_HEIGHT][FIELD_WIDTH];
+    private char[][] itemField = new char[FIELD_HEIGHT][FIELD_WIDTH]; // 아이템 타입 저장
     private Block currentBlock;
     private Block nextBlock;
     private int blockX, blockY;
@@ -56,7 +57,15 @@ public class GameManager {
     private java.util.List<Particle> particles = new java.util.ArrayList<>();
 
     // 생성자
-    public GameManager() { this(GameMode.CLASSIC); }
+    public GameManager() { 
+        this(GameMode.CLASSIC); 
+        // 아이템 필드 초기화
+        for (int i = 0; i < FIELD_HEIGHT; i++) {
+            for (int j = 0; j < FIELD_WIDTH; j++) {
+                itemField[i][j] = 0; // 아이템 없음
+            }
+        }
+    }
 
     public GameManager(GameMode mode) {
         this.mode = (mode != null ? mode : GameMode.CLASSIC);
@@ -145,28 +154,44 @@ public class GameManager {
         Block candidate = makeRandomBlock();
 
         // 아이템 블록 처리
+        // 5개의 아이템 중에서 랜덤으로 선택되도록 설정
         if (pendingItem) {
-            boolean pickAnvil = random.nextBoolean();
-            if (pickAnvil) {
+            int randomItem = random.nextInt(5);
+            if(randomItem==0){  // 무게추 아이템
                 candidate = new AnvilItemBlock();
                 candidate.setItemType((char)0);
             } else {
                 candidate = makeRandomBlock();
-                candidate.setItemType('L');
-                int[][] shp = candidate.getShape();
                 java.util.List<int[]> ones = new java.util.ArrayList<>();
-                for (int r = 0; r < shp.length; r++)
-                    for (int c = 0; c < shp[r].length; c++)
-                        if (shp[r][c] == 1) ones.add(new int[]{r, c});
-                if (!ones.isEmpty()) {
-                    int[] pick = ones.get(random.nextInt(ones.size()));
-                    try {
-                        candidate.getClass().getMethod("setItemCell", int.class, int.class)
-                                .invoke(candidate, pick[0], pick[1]);
-                    } catch (Exception ignore) {}
-                }
+                switch (randomItem) {
+                case 1: // row 하나 지우기 아이템
+                    candidate.setItemType('L');    
+                    break;
+                case 2: // 블럭 느리게 떨어지기 아이템
+                    candidate.setItemType('T');
+                    break;
+                case 3: // 일정 시간 ㅣ 모양 아이템
+                    candidate.setItemType('3');
+                    break;
+                default: // 일정 시간 점수 2배
+                    candidate.setItemType('4');
+                    break;
             }
+            // 블럭 중 한 칸 랜덤으로 선택해서 아이템 삽입
+            int[][] shp = candidate.getShape();
+                    for (int r = 0; r < shp.length; r++)
+                        for (int c = 0; c < shp[r].length; c++)
+                        if (shp[r][c] == 1) ones.add(new int[]{r, c});
+                    if (!ones.isEmpty()) {
+                        int[] pick = ones.get(random.nextInt(ones.size()));
+                        try {
+                            candidate.getClass().getMethod("setItemCell", int.class, int.class)
+                                    .invoke(candidate, pick[0], pick[1]);
+                        } catch (Exception ignore) {}
+                    }
             pendingItem = false;
+            }
+            
         } else {
             candidate.setItemType((char)0);
             try { candidate.getClass().getMethod("setItemCell", int.class, int.class).invoke(candidate, -1, -1); }
@@ -219,9 +244,32 @@ public class GameManager {
     // 블록 고정
     public void fixBlock() {
         int[][] s = currentBlock.getShape();
-        for (int i = 0; i < s.length; i++)
-            for (int j = 0; j < s[i].length; j++)
-                if (s[i][j] != 0) field[blockY + i][blockX + j] = 1;
+        
+        // 아이템 위치 정보 가져오기
+        Integer ir = null, ic = null;
+        char itemType = currentBlock.getItemType();
+        if (itemType != 0) {
+            try {
+                ir = (Integer) currentBlock.getClass().getMethod("getItemRow").invoke(currentBlock);
+                ic = (Integer) currentBlock.getClass().getMethod("getItemCol").invoke(currentBlock);
+            } catch (Exception ignore) {}
+        }
+        
+        for (int i = 0; i < s.length; i++) {
+            for (int j = 0; j < s[i].length; j++) {
+                if (s[i][j] != 0) {
+                    int fieldY = blockY + i;
+                    int fieldX = blockX + j;
+                    
+                    field[fieldY][fieldX] = 1;
+                    
+                    // 아이템 정보 저장
+                    if (itemType != 0 && ir != null && ic != null && i == ir && j == ic) {
+                        itemField[fieldY][fieldX] = itemType;
+                    }
+                }
+            }
+        }
 
         // 무게추는 고정 시 점수 부여하지 않음
         if (!(currentBlock instanceof AnvilItemBlock)) {
@@ -237,18 +285,27 @@ public class GameManager {
     private void clearRow(int row) {
     if (row < 0 || row >= FIELD_HEIGHT) return;
     
-    // 파티클 효과 생성 - 사라지는 블록들에서 파티클 방출
+    // 파티클 효과 생성 및 T 아이템 체크
     for (int x = 0; x < FIELD_WIDTH; x++) {
         if (field[row][x] == 1) {
+            // T 아이템이 있는 블록이 깨지면 아이템 효과 실행
+            if (itemField[row][x] == 'T') {
+                activateTimeSlowItem();
+            }
+            
             addBreakEffect(x, row);
         }
     }
     
-    // 실제 줄 삭제
+    // 실제 줄 삭제 (아이템 정보도 함께 이동)
     for (int y = row; y > 0; y--) {
         System.arraycopy(field[y - 1], 0, field[y], 0, FIELD_WIDTH);
+        System.arraycopy(itemField[y - 1], 0, itemField[y], 0, FIELD_WIDTH);
     }
-    for (int x = 0; x < FIELD_WIDTH; x++) field[0][x] = 0;
+    for (int x = 0; x < FIELD_WIDTH; x++) {
+        field[0][x] = 0;
+        itemField[0][x] = 0;
+    }
 }
 
     // 아이템 '라인 제거' 적용
@@ -265,7 +322,10 @@ public class GameManager {
         score += 100;
         linesClearedTotal++;
 
-        if (mode == GameMode.ITEM && linesClearedTotal % 3 == 0) pendingItem = true;
+        if (mode == GameMode.ITEM && linesClearedTotal >= 2) {
+                pendingItem = true;
+                linesClearedTotal -= 2;
+            }
     }
 
     // 무게 블록 효과: 충돌 순간 아래 블록 제거
@@ -277,8 +337,14 @@ public class GameManager {
         for (int x = sX; x <= endX; x++) {
             for (int y = sY; y < FIELD_HEIGHT; y++) {
                 if (field[y][x] == 1) {
+                    // T 아이템이 있는 블록이 무게추로 깨지면 아이템 효과 실행
+                    if (itemField[y][x] == 'T') {
+                        activateTimeSlowItem();
+                    }
+                    
                     addBreakEffect(x,y);
                     field[y][x] = 0;
+                    itemField[y][x] = 0; // 아이템 정보도 제거
                 }
             }
         }
@@ -318,7 +384,10 @@ public class GameManager {
             linesClearedTotal += lines;
             if (linesClearedTotal / 10 > level - 1) level = linesClearedTotal / 10 + 1;
             speedUp = (level > 1);
-            if (mode == GameMode.ITEM && linesClearedTotal % 2 == 0) pendingItem = true;
+            if (mode == GameMode.ITEM && linesClearedTotal >= 2) {
+                pendingItem = true;
+                linesClearedTotal -= 2;
+            }
         }
     }
     public void clearLines() { clearLines(true); }
@@ -367,6 +436,13 @@ public class GameManager {
     // 게임 초기화
     public void resetGame() {
         field = new int[FIELD_HEIGHT][FIELD_WIDTH];
+        // 아이템 필드도 초기화
+        for (int i = 0; i < FIELD_HEIGHT; i++) {
+            for (int j = 0; j < FIELD_WIDTH; j++) {
+                itemField[i][j] = 0;
+            }
+        }
+        
         isGameOver = false;
         score = 0;
         nextBlock = makeRandomBlock();
@@ -379,6 +455,22 @@ public class GameManager {
         weightLocked = false;
 
         applyDifficultySettings();
+    }
+
+    // T 아이템 효과: 시간 느리게 하기
+    private void activateTimeSlowItem() {
+        // TODO: T 아이템 효과 구현
+        System.out.println("T 아이템 효과 발동!");
+    }
+    
+    // 아이템 정보 접근 메서드들
+    public char getItemType(int row, int col) {
+        if (row < 0 || row >= FIELD_HEIGHT || col < 0 || col >= FIELD_WIDTH) return 0;
+        return itemField[row][col];
+    }
+    
+    public boolean hasItem(int row, int col) {
+        return getItemType(row, col) != 0;
     }
 
 // HUD: 점수/레벨/난이도/다음블록(줄삭제는 L 문자 표기, 무게추는 전용 모양으로 구분)
@@ -419,7 +511,7 @@ public void renderHUD(Graphics2D g2, int padding, int blockSize, int totalWidth)
         Integer ir = null, ic = null;
 
         // 다음 블록이 줄삭제 아이템(L)인 경우 위치 조회
-        if (nextBlock.getItemType() == 'L') {
+        if (nextBlock.getItemType() != 0) {
             try {
                 ir = (Integer) nextBlock.getClass().getMethod("getItemRow").invoke(nextBlock);
                 ic = (Integer) nextBlock.getClass().getMethod("getItemCol").invoke(nextBlock);
@@ -438,8 +530,8 @@ public void renderHUD(Graphics2D g2, int padding, int blockSize, int totalWidth)
                     */
                     PatternPainter.drawCell(g2, x, y, cell - 1, color, nextBlock, cb);
                     // L 아이템은 문자 표시
-                    if (nextBlock.getItemType() == 'L' && ir != null && ic != null && r == ir && c == ic) {
-                        GameScreen.drawCenteredChar(g2, x, y, cell, 'L');
+                    if (nextBlock.getItemType() != 0 && ir != null && ic != null && r == ir && c == ic) {
+                        GameScreen.drawCenteredChar(g2, x, y, cell, nextBlock.getItemType());
                     }
                 }
             }
