@@ -366,9 +366,9 @@ public class GameManager {
 
         linesClearedTotal++;
 
-        if (mode == GameMode.ITEM && linesClearedTotal >= 2) {
+        if (mode == GameMode.ITEM && linesClearedTotal >= 10) {
                 pendingItem = true;
-                linesClearedTotal -= 2;
+                linesClearedTotal -= 10;
             }
     }
 
@@ -453,9 +453,9 @@ public class GameManager {
             linesClearedTotal += lines;
             if (linesClearedTotal / 10 > level - 1) level = linesClearedTotal / 10 + 1;
             speedUp = (level > 1);
-            if (mode == GameMode.ITEM && linesClearedTotal >= 2) {
+            if (mode == GameMode.ITEM && linesClearedTotal >= 10) {
                 pendingItem = true;
-                linesClearedTotal -= 2;
+                linesClearedTotal -= 10;
             }
         }
     }
