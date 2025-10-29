@@ -96,7 +96,8 @@ public class ScoreManager {
         }
 
         public String getFormattedDate() {
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+            // 표시 형식 변경: 2025-10-29 -> 25.10.29
+            SimpleDateFormat sdf = new SimpleDateFormat("yy.MM.dd");
             return sdf.format(date);
         }
     }

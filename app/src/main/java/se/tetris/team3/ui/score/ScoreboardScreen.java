@@ -27,6 +27,7 @@ public class ScoreboardScreen implements Screen {
     private final ScoreManager scoreManager;
     private final String playerName;
     private final int playerScore;
+    private GameMode currentMode; // 현재 보여줄 모드 추가
     
     public ScoreboardScreen(AppFrame app, int playerScore, ScoreManager scoreManager) {
         this(app, null, playerScore, scoreManager);
@@ -37,6 +38,7 @@ public class ScoreboardScreen implements Screen {
         this.playerName = playerName;
         this.playerScore = playerScore;
         this.scoreManager = scoreManager;
+        this.currentMode = app.getSettings().getGameMode(); // 현재 모드 초기화
         
         items.add(new MenuItem("메인 메뉴", () -> {
             app.showScreen(new MenuScreen(app));
@@ -71,19 +73,29 @@ public class ScoreboardScreen implements Screen {
     
     private void renderTitle(Graphics2D g2, int width) {
         g2.setColor(Color.BLACK);
-        g2.setFont(new Font("Monospaced", Font.BOLD, 24));
+        // 타이틀은 기본 폰트보다 조금 크게
+        int blockSize = app.getSettings().resolveBlockSize();
+        int baseFont = Math.max(10, Math.min(18, Math.max(8, blockSize / 3)));
+        g2.setFont(new Font("Monospaced", Font.BOLD, Math.max(18, baseFont + 6)));
         
-        GameMode mode = app.getSettings().getGameMode();
-        String modeLabel = (mode == GameMode.ITEM) ? "ITEM MODE" : "CLASSIC MODE";
+        String modeLabel = (currentMode == GameMode.ITEM) ? "ITEM MODE" : "CLASSIC MODE";
         String title = "TOP 10 - " + modeLabel;
+        String hint = "(Press TAB to switch mode)";
 
         int titleWidth = g2.getFontMetrics().stringWidth(title);
         g2.drawString(title, (width - titleWidth) / 2, 80);
+        
+        // 힌트 메시지 표시
+        g2.setFont(new Font("Monospaced", Font.PLAIN, Math.max(12, baseFont)));
+        int hintWidth = g2.getFontMetrics().stringWidth(hint);
+        g2.drawString(hint, (width - hintWidth) / 2, 110);
     }
     
     private void renderPlayerScore(Graphics2D g2, int width) {
         g2.setColor(Color.BLUE);
-        g2.setFont(new Font("Monospaced", Font.BOLD, 14));
+        int blockSize = app.getSettings().resolveBlockSize();
+        int baseFont = Math.max(10, Math.min(18, Math.max(8, blockSize / 3)));
+        g2.setFont(new Font("Monospaced", Font.BOLD, baseFont));
         
         GameMode mode = app.getSettings().getGameMode();
         String modeLabel = (mode == GameMode.ITEM) ? "ITEM" : "CLASSIC";
@@ -97,56 +109,85 @@ public class ScoreboardScreen implements Screen {
     private void renderScoreTable(Graphics2D g2, int width) {
         // 테이블 헤더
         g2.setColor(Color.BLACK);
-        g2.setFont(new Font("Monospaced", Font.BOLD, 16));
+        int blockSize = app.getSettings().resolveBlockSize();
+        int baseFont = Math.max(10, Math.min(18, Math.max(8, blockSize / 3)));
+        g2.setFont(new Font("Monospaced", Font.BOLD, Math.max(12, baseFont)));
         
-        int headerY = 180;
-        int leftMargin = width / 8;  // 화면 너비의 1/8을 왼쪽 여백으로
-    int nameX = leftMargin + 80;
-    int scoreX = leftMargin + 160;
-    int diffX = leftMargin + 240;
-    int dateX = leftMargin + 340;
+    int headerY = Math.max(160, baseFont * 14); // 타이틀과 힌트 메시지를 위해 시작 위치를 아래로 조정
+    int leftMargin = Math.max(24, width / 12);  // 화면 너비의 1/12을 왼쪽 여백으로
+
+    // 반응형 컬럼 배치: 전체 테이블 너비 안에서 컬럼 비율로 분배
+    int tableWidth = width - leftMargin * 2;
+    int nameColW = Math.max(50, (int)(tableWidth * 0.30)); // 이름 컬럼 너비 더 줄임
+    int scoreColW = Math.max(50, (int)(tableWidth * 0.15)); // 점수 컬럼 너비도 줄임
+    int diffColW = Math.max(40, (int)(tableWidth * 0.12));
+    int dateColW = tableWidth - (nameColW + scoreColW + diffColW) - 10; // 여유 공간 줄임
+
+    // 날짜는 항상 난이도 옆(같은 행)에 표시하도록 함
+
+    // 랭크와 이름이 겹치지 않도록 rankX와 nameX 분리
+    int nameX = leftMargin + Math.max(30, baseFont * 5); // 이름 시작 위치를 좀 더 왼쪽으로
+    int scoreX = nameX + nameColW - 10; // 점수를 이름 쪽으로 더 가깝게
+    int diffX = scoreX + scoreColW;
+    int dateX = diffX + diffColW;
+
+    // 행 높이: 기본/반응형
+    int rowHeight = Math.max(24, baseFont * 2);
         
-        g2.drawString("Rank", leftMargin, headerY);
+    int rankX = leftMargin;
+    g2.drawString("Rank", rankX, headerY);
         g2.drawString("Name", nameX, headerY);
     g2.drawString("Score", scoreX, headerY);
     g2.drawString("Diff", diffX, headerY);
     g2.drawString("Date", dateX, headerY);
         
-        // 헤더 아래 구분선
-        g2.drawLine(leftMargin - 10, headerY + 10, width - leftMargin + 10, headerY + 10);
+    // 헤더 아래 구분선
+    g2.drawLine(leftMargin - 10, headerY + 10, width - leftMargin + 10, headerY + 10);
         
-        // 현재 모드
-        GameMode mode = app.getSettings().getGameMode();
-        // 스코어 데이터
-        List<ScoreEntry> scores = scoreManager.getHighScores(mode);
+        // 현재 선택된 모드의 스코어 데이터
+        List<ScoreEntry> scores = scoreManager.getHighScores(currentMode);
         
         for (int i = 0; i < Math.min(scores.size(), 10); i++) {
             ScoreEntry entry = scores.get(i);
-            int rowY = headerY + 30 + (i * 30);
+            int rowY = headerY + Math.max(30, baseFont * 3) + (i * rowHeight);
             
             // 새로 추가된 점수 하이라이트
             if (isNewlyAddedScore(entry)) {
                 g2.setColor(Color.BLUE);
-                g2.setFont(new Font("Monospaced", Font.BOLD, 12));
+                g2.setFont(new Font("Monospaced", Font.BOLD, Math.max(12, baseFont - 0)));
             } else {
                 g2.setColor(Color.BLACK);
-                g2.setFont(new Font("Monospaced", Font.PLAIN, 12));
+                g2.setFont(new Font("Monospaced", Font.PLAIN, Math.max(11, baseFont - 1)));
             }
             
-            g2.drawString(String.valueOf(i + 1), leftMargin, rowY);
-            // 열 너비 계산: 다음 열 시작 - 현재 시작 - 여유
-            drawStringEllipsis(g2, entry.getPlayerName(), nameX, rowY, scoreX - nameX - 8);
-            drawStringEllipsis(g2, String.valueOf(entry.getScore()), scoreX, rowY, diffX - scoreX - 8);
-            drawStringEllipsis(g2, entry.getDifficulty().name(), diffX, rowY, dateX - diffX - 8);
-            drawStringEllipsis(g2, entry.getFormattedDate(), dateX, rowY, width - dateX - leftMargin);
+            g2.drawString(String.valueOf(i + 1), rankX, rowY);
+            // 이름은 6자로 제한하고 말줄임표 처리
+            String displayName = entry.getPlayerName();
+            if (displayName.length() > 6) {
+                displayName = displayName.substring(0, 6) + "...";
+            }
+            drawStringEllipsis(g2, displayName, nameX, rowY, nameColW - 8);
+            drawStringEllipsis(g2, String.valueOf(entry.getScore()), scoreX, rowY, scoreColW - 8);
+            // 난이도 축약표기: EASY->E, NORMAL->N, HARD->H
+            String diffShort = switch (entry.getDifficulty()) {
+                case EASY -> "E";
+                case HARD -> "H";
+                default -> "N";
+            };
+            drawStringEllipsis(g2, diffShort, diffX, rowY, diffColW - 8);
+
+            // 날짜는 항상 같은 행에 표시 (너비가 부족하면 말줄임 처리)
+            drawStringEllipsis(g2, entry.getFormattedDate(), dateX, rowY, dateColW - 8);
         }
     }
     
     private void renderMenu(Graphics2D g2, int width, int height) {
-        g2.setFont(new Font("Monospaced", Font.BOLD, 16));
+        int blockSize = app.getSettings().resolveBlockSize();
+        int baseFont = Math.max(10, Math.min(18, Math.max(8, blockSize / 3)));
+        g2.setFont(new Font("Monospaced", Font.BOLD, Math.max(12, baseFont)));
         
         String[] menuLabels = {"   Return to Main Menu", "   Exit Program"};
-        int menuStartY = height - 170;  // 화면 하단에서 170px 위
+    int menuStartY = height - Math.max(140, baseFont * 8);  // 화면 하단에서 비례 위치
         
         for (int i = 0; i < items.size(); i++) {
             int menuY = menuStartY + (i * 40);
@@ -155,13 +196,13 @@ public class ScoreboardScreen implements Screen {
             if (i == idx) {
                 // 선택된 항목 - 배경 하이라이트
                 g2.setColor(Color.YELLOW);
-                int textWidth = g2.getFontMetrics().stringWidth("▶" + text);
+                int textWidth = g2.getFontMetrics().stringWidth("▶"+text);
                 int textX = (width - textWidth) / 2;
-                g2.fillRect(textX - 10, menuY - 20, textWidth + 20, 25);
+                g2.fillRect(textX - 10, menuY - (baseFont + 6), textWidth + 20, baseFont + 10);
                 
                 // 선택된 항목 텍스트
                 g2.setColor(Color.BLUE);
-                g2.drawString("▶" + text, textX, menuY);
+                g2.drawString("▶"+text, textX, menuY);
             } else {
                 // 선택되지 않은 항목
                 g2.setColor(Color.BLACK);
@@ -186,6 +227,12 @@ public class ScoreboardScreen implements Screen {
             // UP, DOWN => idx 변경(원형 이동)
             case KeyEvent.VK_UP -> idx = (idx - 1 + items.size()) % items.size();
             case KeyEvent.VK_DOWN -> idx = (idx + 1) % items.size();
+            
+            // TAB 키로 게임 모드 전환
+            case KeyEvent.VK_TAB -> {
+                currentMode = (currentMode == GameMode.ITEM) ? GameMode.CLASSIC : GameMode.ITEM;
+                app.repaint();
+            }
             
             // 현재 항목의 action.run() 실행
             case KeyEvent.VK_ENTER, KeyEvent.VK_SPACE -> items.get(idx).getAction().run();

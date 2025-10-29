@@ -120,8 +120,8 @@ public class GameManager {
     public int getBaseFallDelay() { return baseFallDelay; }
     public boolean isSpeedUp() { return speedUp; }
 
-    // 블록 생성
-    private Block makeRandomBlock() {
+    // 테스트용 메서드
+    protected Block makeRandomBlock() {
         // I-only 모드가 활성화되어 있으면 남은 시간 동안 I블록만 반환
         if (iOnlyModeActive) {
             if (System.currentTimeMillis() > iOnlyModeEndMillis) {
@@ -537,9 +537,11 @@ public class GameManager {
     // 게임 타이머 딜레이 계산 (느린 모드 적용)
     public int getGameTimerDelay() {
         // 기본 딜레이 계산
-        int base = baseFallDelay;
-        int lvl = Math.max(1, level);
-        int delay = Math.max(50, base - (lvl - 1) * 100);
+    int base = baseFallDelay;
+    int lvl = Math.max(1, level);
+    // 레벨이 오를 때마다 감소하는 폭을 완화: 이전(100ms/level) -> 변경(50ms/level)
+    int perLevelDecrease = 50; // ms 감소량
+    int delay = Math.max(50, base - (lvl - 1) * perLevelDecrease);
         
         // 느린 모드가 활성화되면 속도를 절반(딜레이 2배)으로
         if (slowModeActive) {
@@ -606,12 +608,13 @@ public void renderHUD(Graphics2D g2, int padding, int blockSize, int totalWidth)
     int hudX = padding + fieldW + 16;      // HUD 시작 X 좌표
     int hudWidth = Math.max(120, totalWidth - hudX - padding); // HUD 영역 너비
     
-    // 폰트 크기를 화면 크기에 맞춰 동적 조절
-    int baseFontSize = Math.max(12, Math.min(24, blockSize / 2)); // 최소 12, 최대 24
+    // 폰트 크기를 화면 크기에 맞춰 동적 조절 (조금 더 작게)
+    // 기본: blockSize / 3, 최소 10, 최대 18
+    int baseFontSize = Math.max(10, Math.min(18, Math.max(8, blockSize / 3)));
     g2.setFont(new Font("맑은 고딕", Font.BOLD, baseFontSize));
-    
-    // 행간도 폰트 크기에 맞춰 동적 조절
-    int lineSpacing = (int)(baseFontSize * 1.5);
+
+    // 행간도 폰트 크기에 맞춰 조절 (기본의 1.4배)
+    int lineSpacing = (int)(baseFontSize * 1.4);
     int scoreY = padding + lineSpacing;
 
     // 점수 표시 (말줄임 처리)
@@ -620,11 +623,11 @@ public void renderHUD(Graphics2D g2, int padding, int blockSize, int totalWidth)
     // 레벨 표시
     drawStringEllipsis(g2, "LEVEL: " + level, hudX, scoreY + lineSpacing, hudWidth - 8);
 
-    // 난이도 표시 (전체 이름으로)
+    // 난이도 표시 (단문: E/N/H)
     String diffLabel = switch (difficulty) {
-        case EASY -> "EASY";
-        case HARD -> "HARD";
-        default -> "NORMAL";
+        case EASY -> "E";
+        case HARD -> "H";
+        default -> "N";
     };
     drawStringEllipsis(g2, "DIFFICULTY: " + diffLabel, hudX, scoreY + lineSpacing * 2, hudWidth - 8);
 
