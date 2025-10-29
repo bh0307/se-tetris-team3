@@ -26,17 +26,7 @@ public class AppFrame extends JFrame {
         setResizable(false);
 
         // 키 입력을 현재 화면으로 전달
-        /* (이거 지울듯)
-        addKeyListener(new KeyAdapter() {
-            @Override public void keyPressed(KeyEvent e) {
-                if (current != null) current.onKeyPressed(e);
-                repaint();
-            }
-        });
-        */
         
-
-        // 서보성 추가 -------------
         canvas = new BackBufferPanel(this);
         setContentPane(canvas);
         canvas.setFocusable(true);
@@ -68,15 +58,6 @@ public class AppFrame extends JFrame {
         repaint(); // 새 화면을 그리도록 요청
     }
 
-    // 서보성 추가
-
-    /*
-    // 현재 Screen의 render()로 위임
-    @Override public void paint(Graphics g) {
-        super.paint(g);
-        if (current != null) current.render((Graphics2D) g);
-    }
-    */
 
     /** 내부 백버퍼 패널: 깜빡임 방지 */
     private static final class BackBufferPanel extends JPanel {

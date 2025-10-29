@@ -65,6 +65,11 @@ public class GameManager {
     private long slowModeEndTime = 0;
     private static final long SLOW_MODE_DURATION = 10000; // 10초
 
+    // D 아이템 점수 2배 상태         
+    private boolean doubleScoreActive = false;
+    private long doubleScoreTime = 0L;  // 점수 2배 아이템 지속시간 타이머
+    private static final int DOUBLE_SCORE_DURATION = 10_000; // 10초
+
     // 생성자
     public GameManager() { 
         this(GameMode.CLASSIC); 
@@ -192,7 +197,7 @@ public class GameManager {
                     candidate.setItemType('I');
                     break;
                 default: // 일정 시간 점수 2배
-                    candidate.setItemType('4');
+                    candidate.setItemType('D');
                     break;
             }
             // 블럭 중 한 칸 랜덤으로 선택해서 아이템 삽입
@@ -291,7 +296,10 @@ public class GameManager {
 
         // 무게추는 고정 시 점수 부여하지 않음
         if (!(currentBlock instanceof AnvilItemBlock)) {
-            score += 10;
+            //score += 10;
+            score += getScoreWithMultiplier(10);
+            // System.out.println(getScoreWithMultiplier(10)); 검증용
+
         }
 
         if (currentBlock instanceof AnvilItemBlock) weightLocked = true;
@@ -319,6 +327,8 @@ public class GameManager {
             } else if (itemType == 'I') {
                 // I-only 모드 10초 발동
                 activateIOnlyMode(10000);
+            } else if (itemType == 'D') {
+                activateDoubleScoreItem();
             }
             
             addBreakEffect(x, row);
@@ -347,7 +357,10 @@ public class GameManager {
         if (row < 0 || row >= FIELD_HEIGHT) return;
 
         clearRow(row);
-        score += 100;
+        //score += 100;
+        score += getScoreWithMultiplier(100);
+        // System.out.println(getScoreWithMultiplier(100)); 검증용
+
         linesClearedTotal++;
 
         if (mode == GameMode.ITEM && linesClearedTotal >= 2) {
@@ -372,6 +385,8 @@ public class GameManager {
                     } else if (itemType == 'I') {
                         // I-only 모드 10초 발동
                         activateIOnlyMode(10000);
+                    } else if (itemType == 'D') {
+                        activateDoubleScoreItem();
                     }
                     
                     addBreakEffect(x,y);
@@ -412,7 +427,13 @@ public class GameManager {
             }
         }
         if (lines > 0) {
-            if (awardScore) score += Math.round(lines * 100 * scoreMultiplier);
+            if (awardScore) {
+                // score += Math.round(lines * 100 * scoreMultiplier);
+                score += getScoreWithMultiplier(Math.round(lines * 100 * scoreMultiplier));
+
+                // System.out.println(getScoreWithMultiplier(Math.round(lines * 100 * scoreMultiplier))); 검증용
+
+            }
             linesClearedTotal += lines;
             if (linesClearedTotal / 10 > level - 1) level = linesClearedTotal / 10 + 1;
             speedUp = (level > 1);
@@ -461,7 +482,10 @@ public class GameManager {
             clearLines(!isAnvil);  // 무게추는 점수 반영 안 함
             spawnNewBlock();
         } else {
-            score += Math.round((1 + (level - 1) * 5) * scoreMultiplier);
+            //score += Math.round((1 + (level - 1) * 5) * scoreMultiplier);
+            score += getScoreWithMultiplier((1 + (level - 1) * 5) * scoreMultiplier);
+
+            // System.err.println(getScoreWithMultiplier((1 + (level - 1) * 5) * scoreMultiplier)); 검증용
         }
     }
 
@@ -489,6 +513,10 @@ public class GameManager {
         // 느린 모드 초기화
         slowModeActive = false;
         slowModeEndTime = 0;
+
+        // 점수 2배 모드 초기화
+        doubleScoreActive = false;
+        doubleScoreTime = 0L;
 
         applyDifficultySettings();
     }
@@ -531,6 +559,33 @@ public class GameManager {
         if (!slowModeActive) return 0;
         long remaining = slowModeEndTime - System.currentTimeMillis();
         return Math.max(0, (int)(remaining / 1000));
+    }
+
+    public void activateDoubleScoreItem() {
+        doubleScoreTime = System.currentTimeMillis() + DOUBLE_SCORE_DURATION;
+        doubleScoreActive = true;
+        System.out.println("Double Score Item activated!");
+    }
+
+    /** 기본 점수를 입력하면, 현재 버프에 따라 조정된 점수를 반환
+     * int, long, double 삽입 가능 */
+    private int getScoreWithMultiplier(int base)    { return isDoubleScoreActive() ? base * 2 : base; }
+    private int getScoreWithMultiplier(long base)   { int v = (int) base; return isDoubleScoreActive() ? v * 2 : v; }
+    private int getScoreWithMultiplier(double base) { int v = (int) Math.round(base); return isDoubleScoreActive() ? v * 2 : v; }
+
+    public boolean isDoubleScoreActive() {
+        if (doubleScoreActive && System.currentTimeMillis() > doubleScoreTime) {
+            doubleScoreActive = false;  // 만료
+            // System.out.println("Double Score Item expired!"); 검증용
+        }
+        return doubleScoreActive;
+    }
+
+    public int getDoubleScoreRemainingSeconds() {
+        if (!doubleScoreActive) return 0;
+        long rem = doubleScoreTime - System.currentTimeMillis();
+        if (rem <= 0) { doubleScoreActive = false; return 0; }
+        return (int) Math.ceil(rem / 1000.0);
     }
     
     // 아이템 정보 접근 메서드들
@@ -632,7 +687,24 @@ public void renderHUD(Graphics2D g2, int padding, int blockSize, int totalWidth)
         g2.setColor(Color.YELLOW);
         drawStringEllipsis(g2, remS, hudX, yPos, hudWidth - 8);
     }
- }
+
+    // 점수 2배 모드 표시 남은 시간 표시
+    // 점수 2배 모드 표시 남은 시간 표시 (위치 스택: SLOW → I-MODE → 2x)
+    if (doubleScoreActive) {
+        int remain = (int) Math.ceil((doubleScoreTime - System.currentTimeMillis()) / 1000.0);
+        // 기본 기준 위치는 SLOW와 동일
+        int yPos = scoreY + 180;
+        // SLOW가 보이면 그 아래
+        if (slowModeActive) yPos += 24;
+        // I-MODE가 보이면 그 아래 (SLOW가 없더라도, I-MODE가 있으면 한 칸 아래)
+        if (iOnlyModeActive) yPos += 24;
+
+        g2.setColor(Color.YELLOW); // 기존 색 유지
+        String text = "2x SCORE: " + Math.max(0, remain) + "s";
+        drawStringEllipsis(g2, text, hudX, yPos, hudWidth - 8);
+    }
+    
+}
 
 // 문자열을 주어진 최대 너비에 맞춰 그리고, 넘치면 말줄임표(...)로 대체
 private void drawStringEllipsis(Graphics2D g2, String text, int x, int y, int maxWidth) {
