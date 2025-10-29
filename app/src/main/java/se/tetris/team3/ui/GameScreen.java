@@ -147,6 +147,15 @@ public class GameScreen implements Screen {
             String msg = "PAUSED";
             int msgWidth = g2.getFontMetrics().stringWidth(msg);
             g2.drawString(msg, (width - msgWidth)/2, height/2);
+            
+            // 안내 메시지 - 설정된 키 표시
+            g2.setFont(new Font("SansSerif", Font.PLAIN, 18));
+            g2.setColor(Color.DARK_GRAY);
+            String pauseKey = KeyEvent.getKeyText(settings.getKeymap().get(Settings.Action.PAUSE));
+            String exitKey = KeyEvent.getKeyText(settings.getKeymap().get(Settings.Action.EXIT));
+            String hint = pauseKey + " 계속   " + exitKey + " 종료";
+            int hintWidth = g2.getFontMetrics().stringWidth(hint);
+            g2.drawString(hint, (width - hintWidth)/2, height/2 + 60);
             return;
         }
 
@@ -259,7 +268,9 @@ public class GameScreen implements Screen {
             return;
         }
 
-        if (code == KeyEvent.VK_SPACE) {
+        final var km = settings.getKeymap();
+
+        if (code == km.get(se.tetris.team3.core.Settings.Action.PAUSE)) {
             isPaused = !isPaused;
             if (!isPaused) {
                 if (manager.isGameOver()) { if (timer != null) timer.stop(); }
@@ -271,9 +282,14 @@ public class GameScreen implements Screen {
             } else { if (timer != null) timer.stop(); }
             app.repaint(); return;
         }
+        
+        // 일시정지 중 ESC로 게임 종료
+        if (isPaused && code == km.get(se.tetris.team3.core.Settings.Action.EXIT)) {
+            app.showScreen(new MenuScreen(app));
+            return;
+        }
+        
         if (isPaused) return;
-
-        final var km = settings.getKeymap();
 
         if (code == km.get(se.tetris.team3.core.Settings.Action.MOVE_LEFT)) {
             if (shape != null) manager.tryMove(manager.getBlockX() - 1, manager.getBlockY());
