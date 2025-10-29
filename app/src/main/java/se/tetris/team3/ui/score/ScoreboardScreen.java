@@ -100,10 +100,10 @@ public class ScoreboardScreen implements Screen {
         GameMode mode = app.getSettings().getGameMode();
         String modeLabel = (mode == GameMode.ITEM) ? "ITEM" : "CLASSIC";
         String diffLabel = app.getSettings().getDifficulty().name();
-        String message = String.format("[%s/%s] YOUR SCORE: %d points", modeLabel, diffLabel, playerScore);
+        String message = String.format("[%s,%s] YOUR SCORE: %d points", modeLabel, diffLabel, playerScore);
         
         int messageWidth = g2.getFontMetrics().stringWidth(message);
-        g2.drawString(message, (width - messageWidth) / 2, 120);
+        g2.drawString(message, (width - messageWidth) / 2, 135);
     }
     
     private void renderScoreTable(Graphics2D g2, int width) {

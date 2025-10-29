@@ -677,7 +677,7 @@ public void renderHUD(Graphics2D g2, int padding, int blockSize, int totalWidth)
     
     // 느린 모드 표시 남은 시간 표시
     if (slowModeActive) {
-        g2.setColor(Color.CYAN);
+        g2.setColor(Color.RED);
         int remaining = getSlowModeRemainingTime();
         drawStringEllipsis(g2, "SLOW: " + remaining + "s", hudX, scoreY + 180, hudWidth - 8);
     }
@@ -687,7 +687,7 @@ public void renderHUD(Graphics2D g2, int padding, int blockSize, int totalWidth)
         long rem = Math.max(0, iOnlyModeEndMillis - System.currentTimeMillis());
         String remS = String.format("I-MODE: %ds", (rem + 999) / 1000);
         int yPos = slowModeActive ? scoreY + 204 : scoreY + 180; // SLOW MODE 있으면 그 아래, 없으면 같은 위치
-        g2.setColor(Color.YELLOW);
+        g2.setColor(Color.GREEN);
         drawStringEllipsis(g2, remS, hudX, yPos, hudWidth - 8);
     }
 
@@ -702,7 +702,7 @@ public void renderHUD(Graphics2D g2, int padding, int blockSize, int totalWidth)
         // I-MODE가 보이면 그 아래 (SLOW가 없더라도, I-MODE가 있으면 한 칸 아래)
         if (iOnlyModeActive) yPos += 24;
 
-        g2.setColor(Color.YELLOW); // 기존 색 유지
+        g2.setColor(Color.BLUE);
         String text = "2x SCORE: " + Math.max(0, remain) + "s";
         drawStringEllipsis(g2, text, hudX, yPos, hudWidth - 8);
     }

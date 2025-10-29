@@ -251,9 +251,10 @@ public class GameScreen implements Screen {
 
             // 최고 점수이면 이름 입력 화면으로
             if (sm.isHighScore(mode, score)) {
-                // 기존: app.showScreen(new NameInputScreen(app, manager.getScore()));
-                // 수정: 모드 포함 버전
                 app.showScreen(new NameInputScreen(app, mode, score));
+            } else {
+                // 최고 점수가 아니면 바로 스코어보드로
+                app.showScreen(new se.tetris.team3.ui.score.ScoreboardScreen(app, score, sm));
             }
             return;
         }
