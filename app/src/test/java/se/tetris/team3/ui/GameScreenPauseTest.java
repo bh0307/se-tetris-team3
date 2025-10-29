@@ -9,6 +9,7 @@ import se.tetris.team3.core.Settings.Action;
 
 import java.awt.event.KeyEvent;
 import java.lang.reflect.Field;
+import javax.swing.Timer;
 
 /**
  * GameScreen 일시정지 기능 테스트
@@ -22,11 +23,12 @@ public class GameScreenPauseTest {
     private Settings settings;
 
     @BeforeEach
-    public void setUp() {
+    public void setUp() throws Exception {
         settings = new Settings();
         settings.resetDefaults();
         mockApp = new MockAppFrame(settings);
         gameScreen = new GameScreen(mockApp);
+        initializeTimer(gameScreen);
     }
 
     @Test
@@ -135,6 +137,18 @@ public class GameScreenPauseTest {
     }
 
     // ===== Helper Methods =====
+
+    /**
+     * GameScreen의 timer 필드를 더미 타이머로 초기화
+     * onShow()를 호출하지 않고도 updateTimerDelay() NPE를 방지
+     */
+    private void initializeTimer(GameScreen screen) throws Exception {
+        Field timerField = GameScreen.class.getDeclaredField("timer");
+        timerField.setAccessible(true);
+        // 더미 타이머 (실제로 실행되지 않음, delay 설정만 가능)
+        Timer dummyTimer = new Timer(1000, e -> {});
+        timerField.set(screen, dummyTimer);
+    }
 
     private boolean isPaused() throws Exception {
         Field pauseField = GameScreen.class.getDeclaredField("isPaused");
