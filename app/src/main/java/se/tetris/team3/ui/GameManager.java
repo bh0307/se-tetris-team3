@@ -439,9 +439,9 @@ public class GameManager {
                     Thread.currentThread().interrupt();
                 }
                 
-                // 실제 줄 삭제 (위에서 아래로)
-                for (int row : fullRows) {
-                    clearRow(row);
+                // 실제 줄 삭제 (위에서 아래로 - 역순으로 삭제해야 인덱스 안 꼬임)
+                for (int i = fullRows.size() - 1; i >= 0; i--) {
+                    clearRow(fullRows.get(i));
                 }
                 flashingRows.clear();
             }).start();
@@ -460,6 +460,14 @@ public class GameManager {
         }
     }
     public void clearLines() { clearLines(true); }
+
+    // 자동 라인 체크 (렌더링 타이머에서 호출)
+    public void autoCheckLines() {
+        // 플래시 중이 아니고, 게임 오버가 아닐 때만 체크
+        if (flashingRows.isEmpty() && !isGameOver) {
+            clearLines(true);
+        }
+    }
 
     // 블록 한 칸 아래로 이동 또는 고정
     public void stepDownOrFix() {

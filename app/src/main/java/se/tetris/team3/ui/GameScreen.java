@@ -52,6 +52,7 @@ public class GameScreen implements Screen {
             if (!isPaused) {
                 manager.updateParticles();
                 manager.updateSlowMode(); // 느린 모드 상태 업데이트
+                manager.autoCheckLines(); // 자동 라인 체크 (연쇄 제거)
                 app.repaint();
             }
         }
