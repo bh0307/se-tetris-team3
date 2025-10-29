@@ -172,12 +172,21 @@ public class GameScreen implements Screen {
                 if (manager.getFieldValue(r, c) != 0) {
                     int x = padding + c * blockSize;
                     int y = padding + r * blockSize;
-                    PatternPainter.drawCell(g2, x, y, blockSize, Color.GRAY, null, settings.isColorBlindMode());
                     
-                    // 고정된 블록에 아이템이 있으면 글자 표시
-                    if (manager.hasItem(r, c)) {
-                        char itemType = manager.getItemType(r, c);
-                        drawCenteredChar(g2, x, y, blockSize, itemType);
+                    // 플래시 효과: 해당 줄이 깨지기 직전이면 하얗게 렌더링
+                    if (manager.isRowFlashing(r)) {
+                        g2.setColor(Color.WHITE);
+                        g2.fillRect(x, y, blockSize, blockSize);
+                        g2.setColor(Color.LIGHT_GRAY);
+                        g2.drawRect(x, y, blockSize - 1, blockSize - 1);
+                    } else {
+                        PatternPainter.drawCell(g2, x, y, blockSize, Color.GRAY, null, settings.isColorBlindMode());
+                        
+                        // 고정된 블록에 아이템이 있으면 글자 표시
+                        if (manager.hasItem(r, c)) {
+                            char itemType = manager.getItemType(r, c);
+                            drawCenteredChar(g2, x, y, blockSize, itemType);
+                        }
                     }
                 }
             }
