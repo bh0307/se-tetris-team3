@@ -52,6 +52,7 @@ public class GameScreen implements Screen {
             if (!isPaused) {
                 manager.updateParticles();
                 manager.updateSlowMode(); // 느린 모드 상태 업데이트
+                manager.autoCheckLines(); // 자동 라인 체크 (연쇄 제거)
                 app.repaint();
             }
         }
@@ -147,6 +148,15 @@ public class GameScreen implements Screen {
             String msg = "PAUSED";
             int msgWidth = g2.getFontMetrics().stringWidth(msg);
             g2.drawString(msg, (width - msgWidth)/2, height/2);
+            
+            // 안내 메시지 - 설정된 키 표시
+            g2.setFont(new Font("SansSerif", Font.PLAIN, 18));
+            g2.setColor(Color.DARK_GRAY);
+            String pauseKey = KeyEvent.getKeyText(settings.getKeymap().get(Settings.Action.PAUSE));
+            String exitKey = KeyEvent.getKeyText(settings.getKeymap().get(Settings.Action.EXIT));
+            String hint = pauseKey + " 계속   " + exitKey + " 종료";
+            int hintWidth = g2.getFontMetrics().stringWidth(hint);
+            g2.drawString(hint, (width - hintWidth)/2, height/2 + 60);
             return;
         }
 
@@ -163,12 +173,21 @@ public class GameScreen implements Screen {
                 if (manager.getFieldValue(r, c) != 0) {
                     int x = padding + c * blockSize;
                     int y = padding + r * blockSize;
-                    PatternPainter.drawCell(g2, x, y, blockSize, Color.GRAY, null, settings.isColorBlindMode());
                     
-                    // 고정된 블록에 아이템이 있으면 글자 표시
-                    if (manager.hasItem(r, c)) {
-                        char itemType = manager.getItemType(r, c);
-                        drawCenteredChar(g2, x, y, blockSize, itemType);
+                    // 플래시 효과: 해당 줄이 깨지기 직전이면 하얗게 렌더링
+                    if (manager.isRowFlashing(r)) {
+                        g2.setColor(Color.WHITE);
+                        g2.fillRect(x, y, blockSize, blockSize);
+                        g2.setColor(Color.LIGHT_GRAY);
+                        g2.drawRect(x, y, blockSize - 1, blockSize - 1);
+                    } else {
+                        PatternPainter.drawCell(g2, x, y, blockSize, Color.GRAY, null, settings.isColorBlindMode());
+                        
+                        // 고정된 블록에 아이템이 있으면 글자 표시
+                        if (manager.hasItem(r, c)) {
+                            char itemType = manager.getItemType(r, c);
+                            drawCenteredChar(g2, x, y, blockSize, itemType);
+                        }
                     }
                 }
             }
@@ -251,14 +270,17 @@ public class GameScreen implements Screen {
 
             // 최고 점수이면 이름 입력 화면으로
             if (sm.isHighScore(mode, score)) {
-                // 기존: app.showScreen(new NameInputScreen(app, manager.getScore()));
-                // 수정: 모드 포함 버전
                 app.showScreen(new NameInputScreen(app, mode, score));
+            } else {
+                // 최고 점수가 아니면 바로 스코어보드로
+                app.showScreen(new se.tetris.team3.ui.score.ScoreboardScreen(app, score, sm));
             }
             return;
         }
 
-        if (code == KeyEvent.VK_SPACE) {
+        final var km = settings.getKeymap();
+
+        if (code == km.get(se.tetris.team3.core.Settings.Action.PAUSE)) {
             isPaused = !isPaused;
             if (!isPaused) {
                 if (manager.isGameOver()) { if (timer != null) timer.stop(); }
@@ -270,9 +292,14 @@ public class GameScreen implements Screen {
             } else { if (timer != null) timer.stop(); }
             app.repaint(); return;
         }
+        
+        // 일시정지 중 ESC로 게임 종료
+        if (isPaused && code == km.get(se.tetris.team3.core.Settings.Action.EXIT)) {
+            app.showScreen(new MenuScreen(app));
+            return;
+        }
+        
         if (isPaused) return;
-
-        final var km = settings.getKeymap();
 
         if (code == km.get(se.tetris.team3.core.Settings.Action.MOVE_LEFT)) {
             if (shape != null) manager.tryMove(manager.getBlockX() - 1, manager.getBlockY());

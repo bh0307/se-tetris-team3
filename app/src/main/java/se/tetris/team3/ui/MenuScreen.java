@@ -4,6 +4,7 @@ import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.List;
+import javax.swing.Timer;
 
 import se.tetris.team3.core.GameMode;
 import se.tetris.team3.ui.score.ScoreManager;
@@ -15,6 +16,9 @@ public class MenuScreen implements Screen {
     private final AppFrame app;
     private final List<MenuItem> items = new ArrayList<>();
     private int idx = 0; // 현재 선택 인덱스
+    private boolean showHintHighlight = false; // 힌트 강조 표시 여부
+    private long hintHighlightTime = 0; // 힌트 강조 시작 시간
+    private Timer repaintTimer; // 화면 갱신 타이머
 
     public MenuScreen(AppFrame app) {
         this.app = app;
@@ -60,11 +64,18 @@ public class MenuScreen implements Screen {
             y += 40;
         }
 
-        // 하단 힌트
-        g2.setColor(Color.GRAY);
-        g2.setFont(new Font("SansSerif", Font.PLAIN, 14));
-        String hint = "↑/↓ 이동   Enter 선택   Esc 종료";
-        g2.drawString(hint, (w - g2.getFontMetrics().stringWidth(hint)) / 2, app.getHeight() - 60);
+        // 하단 힌트 (잘못된 키 입력 시 1초간만 표시)
+        boolean showHint = showHintHighlight && System.currentTimeMillis() - hintHighlightTime < 1000;
+        if (showHintHighlight && !showHint) {
+            showHintHighlight = false;
+        }
+        
+        if (showHint) {
+            g2.setColor(Color.RED);
+            g2.setFont(new Font("SansSerif", Font.BOLD, 16));
+            String hint = "↑/↓ 이동   Enter 선택   Esc 종료";
+            g2.drawString(hint, (w - g2.getFontMetrics().stringWidth(hint)) / 2, app.getHeight() - 60);
+        }
     }
 
     @Override public void onKeyPressed(KeyEvent e) {
@@ -73,12 +84,32 @@ public class MenuScreen implements Screen {
             case KeyEvent.VK_DOWN -> idx = (idx + 1) % items.size();
             case KeyEvent.VK_ENTER -> items.get(idx).getAction().run();
             case KeyEvent.VK_ESCAPE -> System.exit(0);
+            default -> {
+                // 유효하지 않은 키 입력 시 힌트 강조
+                showHintHighlight = true;
+                hintHighlightTime = System.currentTimeMillis();
+                
+                // 1초 후 자동으로 화면 갱신하기 위한 타이머
+                if (repaintTimer != null) {
+                    repaintTimer.stop();
+                }
+                repaintTimer = new Timer(1000, e1 -> {
+                    app.repaint();
+                    repaintTimer.stop();
+                });
+                repaintTimer.setRepeats(false);
+                repaintTimer.start();
+            }
         }
         app.repaint();
     }
     //필요시 포커스 관련 처리 추가 가능
     @Override public void onShow() {}
     //필요시 리소스 정리
-    @Override public void onHide() {}
+    @Override public void onHide() {
+        if (repaintTimer != null) {
+            repaintTimer.stop();
+        }
+    }
     
 }

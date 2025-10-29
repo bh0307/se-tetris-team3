@@ -57,8 +57,11 @@ public class GameManager {
     private boolean iOnlyModeActive = false;
     private long iOnlyModeEndMillis = 0L;
 
-    // 블록 제거 시 발생하는 파티클
-    private java.util.List<Particle> particles = new java.util.ArrayList<>();
+    // 블록 제거 시 발생하는 파티클 (스레드 안전하게 동기화)
+    private java.util.List<Particle> particles = java.util.Collections.synchronizedList(new java.util.ArrayList<>());
+
+    // 라인 삭제 시 플래시 효과
+    private java.util.Set<Integer> flashingRows = new java.util.HashSet<>();
 
     // T 아이템 느린 모드 상태
     private boolean slowModeActive = false;
@@ -416,23 +419,36 @@ public class GameManager {
     
      // 라인 제거 함수(무게추일 경우 점수 미집계)
     public void clearLines(boolean awardScore) {
-        int lines = 0;
+        java.util.List<Integer> fullRows = new java.util.ArrayList<>();
         for (int i = FIELD_HEIGHT - 1; i >= 0; i--) {
             boolean full = true;
             for (int j = 0; j < FIELD_WIDTH; j++) if (field[i][j] == 0) { full = false; break; }
-            if (full) {
-                lines++;
-                clearRow(i);
-                i++;
-            }
+            if (full) fullRows.add(i);
         }
-        if (lines > 0) {
+        
+        if (!fullRows.isEmpty()) {
+            // 플래시 효과: 해당 줄을 잠깐 하얗게 표시
+            flashingRows.clear();
+            flashingRows.addAll(fullRows);
+            
+            // 짧은 딜레이 후 실제 삭제
+            new Thread(() -> {
+                try {
+                    Thread.sleep(100); // 100ms 플래시
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+                
+                // 실제 줄 삭제 (위에서 아래로 - 역순으로 삭제해야 인덱스 안 꼬임)
+                for (int i = fullRows.size() - 1; i >= 0; i--) {
+                    clearRow(fullRows.get(i));
+                }
+                flashingRows.clear();
+            }).start();
+            
+            int lines = fullRows.size();
             if (awardScore) {
-                // score += Math.round(lines * 100 * scoreMultiplier);
                 score += getScoreWithMultiplier(Math.round(lines * 100 * scoreMultiplier));
-
-                // System.out.println(getScoreWithMultiplier(Math.round(lines * 100 * scoreMultiplier))); 검증용
-
             }
             linesClearedTotal += lines;
             if (linesClearedTotal / 10 > level - 1) level = linesClearedTotal / 10 + 1;
@@ -444,6 +460,14 @@ public class GameManager {
         }
     }
     public void clearLines() { clearLines(true); }
+
+    // 자동 라인 체크 (렌더링 타이머에서 호출)
+    public void autoCheckLines() {
+        // 플래시 중이 아니고, 게임 오버가 아닐 때만 체크
+        if (flashingRows.isEmpty() && !isGameOver) {
+            clearLines(true);
+        }
+    }
 
     // 블록 한 칸 아래로 이동 또는 고정
     public void stepDownOrFix() {
@@ -599,6 +623,11 @@ public class GameManager {
     public boolean hasItem(int row, int col) {
         return getItemType(row, col) != 0;
     }
+    
+    // 라인 플래시 효과 확인
+    public boolean isRowFlashing(int row) {
+        return flashingRows.contains(row);
+    }
 
 // HUD: 점수/레벨/난이도/다음블록(줄삭제는 L 문자 표기, 무게추는 전용 모양으로 구분)
 public void renderHUD(Graphics2D g2, int padding, int blockSize, int totalWidth) {
@@ -677,7 +706,7 @@ public void renderHUD(Graphics2D g2, int padding, int blockSize, int totalWidth)
     
     // 느린 모드 표시 남은 시간 표시
     if (slowModeActive) {
-        g2.setColor(Color.CYAN);
+        g2.setColor(Color.RED);
         int remaining = getSlowModeRemainingTime();
         drawStringEllipsis(g2, "SLOW: " + remaining + "s", hudX, scoreY + 180, hudWidth - 8);
     }
@@ -687,7 +716,7 @@ public void renderHUD(Graphics2D g2, int padding, int blockSize, int totalWidth)
         long rem = Math.max(0, iOnlyModeEndMillis - System.currentTimeMillis());
         String remS = String.format("I-MODE: %ds", (rem + 999) / 1000);
         int yPos = slowModeActive ? scoreY + 204 : scoreY + 180; // SLOW MODE 있으면 그 아래, 없으면 같은 위치
-        g2.setColor(Color.YELLOW);
+        g2.setColor(Color.GREEN);
         drawStringEllipsis(g2, remS, hudX, yPos, hudWidth - 8);
     }
 
@@ -702,7 +731,7 @@ public void renderHUD(Graphics2D g2, int padding, int blockSize, int totalWidth)
         // I-MODE가 보이면 그 아래 (SLOW가 없더라도, I-MODE가 있으면 한 칸 아래)
         if (iOnlyModeActive) yPos += 24;
 
-        g2.setColor(Color.YELLOW); // 기존 색 유지
+        g2.setColor(Color.BLUE);
         String text = "2x SCORE: " + Math.max(0, remain) + "s";
         drawStringEllipsis(g2, text, hudX, yPos, hudWidth - 8);
     }
@@ -779,11 +808,13 @@ private static class Particle {
 }
 
 public void updateParticles() {
-    // 파티클 업데이트 및 죽은 파티클 제거
-    particles.removeIf(particle -> {
-        particle.update();
-        return particle.isDead();
-    });
+    // 파티클 업데이트 및 죽은 파티클 제거 (동기화 블록 사용)
+    synchronized(particles) {
+        particles.removeIf(particle -> {
+            particle.update();
+            return particle.isDead();
+        });
+    }
 }
 
     // I-only 모드 활성화: 지정된 밀리초 동안 I형 블록만 생성
@@ -795,8 +826,11 @@ public void updateParticles() {
     }
 
 public void renderParticles(Graphics2D g2, int blockSize) {
-    for (Particle particle : particles) {
-        particle.render(g2, blockSize);
+    // 렌더링 중에도 다른 스레드가 리스트를 수정할 수 있으므로 동기화
+    synchronized(particles) {
+        for (Particle particle : particles) {
+            particle.render(g2, blockSize);
+        }
     }
 }
 

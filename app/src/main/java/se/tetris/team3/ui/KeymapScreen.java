@@ -18,7 +18,7 @@ public class KeymapScreen implements Screen {
     private final List<Action> items = new ArrayList<>();
     private int cursor = 0;
     private boolean waitingInput = false;
-    private String status = "↑/↓: 이동  Enter: 입력대기  ESC/Backspace: 뒤로가기";
+    private String status = "↑/↓ 이동   Enter 선택   ESC 뒤로";
 
     public KeymapScreen(AppFrame app) {
         this.app = app;
@@ -62,8 +62,8 @@ public class KeymapScreen implements Screen {
         }
 
         g2.setColor(waitingInput ? Color.ORANGE : Color.GRAY);
-        g2.setFont(new Font("SansSerif", Font.PLAIN, 16));
-        g2.drawString(status, 36, h - 36);
+        g2.setFont(new Font("SansSerif", Font.PLAIN, 14));
+        g2.drawString(status, (w - g2.getFontMetrics().stringWidth(status)) / 2, h - 60);
     }
 
     private boolean isKeyInUse(int keyCode, Action except) {
@@ -78,7 +78,7 @@ public class KeymapScreen implements Screen {
 
         if (waitingInput) {
             // 취소
-            if (code == KeyEvent.VK_ESCAPE || code == KeyEvent.VK_BACK_SPACE) {
+            if (code == KeyEvent.VK_ESCAPE) {
                 waitingInput = false;
                 status = "입력 취소됨";
                 app.repaint();
@@ -104,9 +104,9 @@ public class KeymapScreen implements Screen {
             case KeyEvent.VK_DOWN -> cursor = (cursor + 1) % items.size();
             case KeyEvent.VK_ENTER -> {
                 waitingInput = true;
-                status = items.get(cursor).name() + " : 새 키를 눌러주세요 (ESC/Backspace 취소)";
+                status = items.get(cursor).name() + " : 새 키를 눌러주세요 (ESC 취소)";
             }
-            case KeyEvent.VK_ESCAPE, KeyEvent.VK_BACK_SPACE -> app.showScreen(new SettingsScreen(app));
+            case KeyEvent.VK_ESCAPE -> app.showScreen(new SettingsScreen(app));
         }
         app.repaint();
     }

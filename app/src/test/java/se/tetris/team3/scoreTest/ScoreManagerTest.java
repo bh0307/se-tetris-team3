@@ -165,7 +165,7 @@ public class ScoreManagerTest {
         
         // Then
         assertNotNull(formattedDate);
-        assertTrue(formattedDate.matches("\\d{4}-\\d{2}-\\d{2}"), "날짜는 yyyy-MM-dd 형식이어야 합니다");
+        assertTrue(formattedDate.matches("\\d{2}.\\d{2}.\\d{2}"), "날짜는 yy.MM.dd 형식이어야 합니다");
     }
     
     @Test

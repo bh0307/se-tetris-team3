@@ -29,7 +29,7 @@ public class BlockWeightTest {
         }
     }
 
-    private static final int ITERATIONS = 10000;  // 10000번 반복
+    private static final int ITERATIONS = 100000;  // 100000번 반복
     private static final double ALLOWED_ERROR = 0.05;  // 허용 오차 5%
 
     @Test
