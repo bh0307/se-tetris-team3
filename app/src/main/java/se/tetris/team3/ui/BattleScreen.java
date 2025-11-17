@@ -140,6 +140,14 @@ public class BattleScreen implements Screen {
                 player2LastDrop = System.currentTimeMillis();
             }
             case KeyEvent.VK_UP -> p2.rotateBlock();
+            case KeyEvent.VK_ENTER -> {
+                p2.hardDrop();
+                player2LastDrop = System.currentTimeMillis();
+            }
+            case KeyEvent.VK_SPACE -> {
+                p1.hardDrop();
+                player1LastDrop = System.currentTimeMillis();
+            }
 
             // ESC: 메뉴로
             case KeyEvent.VK_ESCAPE -> frame.showScreen(new MenuScreen(frame));
@@ -255,7 +263,7 @@ public class BattleScreen implements Screen {
             }
         }
 
-        // 현재 블럭
+        // 현재 블럭 + 고스트 블록(하드 드롭 위치 미리보기)
         if (!manager.isGameOver() && manager.getCurrentBlock() != null) {
             var cur = manager.getCurrentBlock();
             int[][] shape = cur.getShape();
@@ -263,6 +271,45 @@ public class BattleScreen implements Screen {
             int bx = manager.getBlockX();
             int by = manager.getBlockY();
 
+            // 1. 하드 드롭 위치 계산
+            int ghostY = by;
+            while (true) {
+                boolean canMove = true;
+                for (int r = 0; r < shape.length; r++) {
+                    for (int c = 0; c < shape[r].length; c++) {
+                        if (shape[r][c] != 0) {
+                            int testY = ghostY + r + 1;
+                            int testX = bx + c;
+                            if (testY >= 20 || manager.getFieldValue(testY, testX) != 0) {
+                                canMove = false;
+                                break;
+                            }
+                        }
+                    }
+                    if (!canMove) break;
+                }
+                if (!canMove) break;
+                ghostY++;
+            }
+
+            // 2. 고스트 블록(연한 색) 먼저 그림
+            Color ghostColor = new Color(base.getRed(), base.getGreen(), base.getBlue(), 80); // 투명도 적용
+            for (int r = 0; r < shape.length; r++) {
+                for (int c = 0; c < shape[r].length; c++) {
+                    if (shape[r][c] != 0) {
+                        int gx = bx + c;
+                        int gy = ghostY + r;
+                        if (gx >= 0 && gx < 10 && gy >= 0 && gy < 20) {
+                            int cellX = x + gx * blockSize;
+                            int cellY = y + gy * blockSize;
+                            g2.setColor(ghostColor);
+                            g2.fillRect(cellX, cellY, blockSize - 1, blockSize - 1);
+                        }
+                    }
+                }
+            }
+
+            // 3. 실제 블록 그림
             Integer ir = null, ic = null;
             if (cur.getItemType() != 0) {
                 try {
@@ -270,7 +317,6 @@ public class BattleScreen implements Screen {
                     ic = (Integer) cur.getClass().getMethod("getItemCol").invoke(cur);
                 } catch (Exception ignore) {}
             }
-
             for (int r = 0; r < shape.length; r++) {
                 for (int c = 0; c < shape[r].length; c++) {
                     if (shape[r][c] != 0) {
@@ -281,7 +327,6 @@ public class BattleScreen implements Screen {
                             int cellY = y + gy * blockSize;
                             g2.setColor(base);
                             g2.fillRect(cellX, cellY, blockSize - 1, blockSize - 1);
-
                             if (cur.getItemType() != 0 && ir != null && ic != null
                                     && r == ir && c == ic) {
                                 GameScreen.drawCenteredChar(g2, cellX, cellY, blockSize, cur.getItemType());

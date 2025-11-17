@@ -293,6 +293,12 @@ public class GameManager {
         }
     }
 
+        // 하드드롭: 블록을 바닥까지 즉시 내림
+        public void hardDrop() {
+            while (tryMove(blockX, blockY + 1));
+            stepDownOrFix();
+        }
+        
     // 블록 고정
     public void fixBlock() {
         int[][] s = currentBlock.getShape();

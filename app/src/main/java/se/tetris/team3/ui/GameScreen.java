@@ -193,7 +193,7 @@ public class GameScreen implements Screen {
             }
         }
 
-        // 현재 블록
+        // 현재 블록 및 고스트 블록(하드 드롭 위치 미리보기)
         if (!manager.isGameOver()) {
             Block cur = manager.getCurrentBlock();
             if (cur != null) {
@@ -201,7 +201,43 @@ public class GameScreen implements Screen {
                 Color base = cur.getColor();
                 int bx = manager.getBlockX(), by = manager.getBlockY();
 
-                // L 위치 (있을 때만 사용)
+                // 1. 하드 드롭 위치 계산
+                int ghostY = by;
+                while (true) {
+                    boolean canMove = true;
+                    for (int r = 0; r < shape.length; r++) {
+                        for (int c = 0; c < shape[r].length; c++) {
+                            if (shape[r][c] != 0) {
+                                int testY = ghostY + r + 1;
+                                int testX = bx + c;
+                                if (testY >= REGION_ROWS || manager.getFieldValue(testY, testX) != 0) {
+                                    canMove = false;
+                                    break;
+                                }
+                            }
+                        }
+                        if (!canMove) break;
+                    }
+                    if (!canMove) break;
+                    ghostY++;
+                }
+
+                // 2. 고스트 블록(연한 색) 먼저 그림
+                Color ghostColor = new Color(base.getRed(), base.getGreen(), base.getBlue(), 80); // 투명도 적용
+                for (int r = 0; r < shape.length; r++) {
+                    for (int c = 0; c < shape[r].length; c++) {
+                        if (shape[r][c] != 0) {
+                            int gx = bx + c, gy = ghostY + r;
+                            if (gx>=0 && gx<REGION_COLS && gy>=0 && gy<REGION_ROWS) {
+                                int x = padding + gx * blockSize;
+                                int y = padding + gy * blockSize;
+                                PatternPainter.drawCell(g2, x, y, blockSize, ghostColor, cur, settings.isColorBlindMode());
+                            }
+                        }
+                    }
+                }
+
+                // 3. 실제 블록 그림
                 Integer ir = null, ic = null;
                 if (cur.getItemType() != 0) {
                     try {
@@ -209,7 +245,6 @@ public class GameScreen implements Screen {
                         ic = (Integer) cur.getClass().getMethod("getItemCol").invoke(cur);
                     } catch (Exception ignore) {}
                 }
-
                 for (int r = 0; r < shape.length; r++) {
                     for (int c = 0; c < shape[r].length; c++) {
                         if (shape[r][c] != 0) {
@@ -218,8 +253,6 @@ public class GameScreen implements Screen {
                                 int x = padding + gx * blockSize;
                                 int y = padding + gy * blockSize;
                                 PatternPainter.drawCell(g2, x, y, blockSize, base, cur, settings.isColorBlindMode());
-
-                                // ★ 줄삭제 L은 붙은 칸에만 문자 오버레이(무게추는 글자 없음)
                                 if (cur.getItemType() != 0 && ir != null && ic != null && r == ir && c == ic) {
                                     drawCenteredChar(g2, x, y, blockSize, cur.getItemType());
                                 }
@@ -230,7 +263,6 @@ public class GameScreen implements Screen {
             }
             int width = app.getWidth();
             manager.renderHUD(g2, padding, blockSize, width);
-            // 파티클 효과 렌더링
             manager.renderParticles(g2, blockSize);
         } else {
             // GAME OVER
@@ -323,6 +355,8 @@ public class GameScreen implements Screen {
             }
         } else if (code == km.get(se.tetris.team3.core.Settings.Action.SOFT_DROP)) {
             if (shape != null) manager.tryMove(manager.getBlockX(), manager.getBlockY() + 1);
+        } else if (code == km.get(se.tetris.team3.core.Settings.Action.HARD_DROP)) {
+            if (shape != null) manager.hardDrop();
         } else if (code == km.get(se.tetris.team3.core.Settings.Action.EXIT)) {
             app.showScreen(new MenuScreen(app));
         }

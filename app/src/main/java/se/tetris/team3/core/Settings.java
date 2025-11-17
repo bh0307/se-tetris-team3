@@ -18,7 +18,7 @@ public class Settings {
     private Difficulty difficulty = Difficulty.NORMAL;
 
     // Action: 키 리매핑용 식별자
-    public enum Action { MOVE_LEFT, MOVE_RIGHT, ROTATE, SOFT_DROP, PAUSE, EXIT }
+    public enum Action { MOVE_LEFT, MOVE_RIGHT, ROTATE, SOFT_DROP, HARD_DROP, PAUSE, EXIT }
     private final Map<Action, Integer> keymap = new EnumMap<>(Action.class);
 
     // 색맹 모드 (기본값 false)
@@ -75,6 +75,7 @@ public class Settings {
         keymap.put(Action.MOVE_RIGHT, KeyEvent.VK_RIGHT);
         keymap.put(Action.ROTATE, KeyEvent.VK_UP);
         keymap.put(Action.SOFT_DROP, KeyEvent.VK_DOWN);
+            keymap.put(Action.HARD_DROP, KeyEvent.VK_SPACE); // 기본값: 스페이스바
         keymap.put(Action.PAUSE, KeyEvent.VK_P);
         keymap.put(Action.EXIT, KeyEvent.VK_ESCAPE);
     }
