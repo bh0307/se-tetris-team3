@@ -1,4 +1,4 @@
-package se.tetris.team3.ui;
+package se.tetris.team3.uiTest;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -6,6 +6,10 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import se.tetris.team3.core.Settings;
 import se.tetris.team3.core.Settings.Action;
+import se.tetris.team3.ui.AppFrame;
+import se.tetris.team3.ui.GameScreen;
+import se.tetris.team3.ui.MenuScreen;
+import se.tetris.team3.ui.Screen;
 
 import java.awt.event.KeyEvent;
 import java.lang.reflect.Field;

@@ -18,6 +18,8 @@ repositories {
 dependencies {
     // Use JUnit Jupiter for testing.
     testImplementation libs.junit.jupiter
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.9.3'
+    testImplementation 'org.mockito:mockito-core:4.11.0'
 
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
@@ -29,6 +31,25 @@ dependencies {
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(11)
+    }
+}
+
+// JaCoCo 플러그인 추가 (테스트 커버리지)
+apply plugin: 'jacoco'
+
+jacoco {
+    toolVersion = "0.8.10"
+}
+
+test {
+    finalizedBy jacocoTestReport
+}
+
+jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.required = true
+        html.required = true
     }
 }
 

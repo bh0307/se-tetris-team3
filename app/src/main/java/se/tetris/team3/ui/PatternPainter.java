@@ -112,16 +112,6 @@ public final class PatternPainter {
         g2.draw(cell);
     }
 
-    private static void strokeRounded(Graphics2D g2, int x, int y, int size, Color stroke) {
-        int arc = Math.max(4, Math.round(size * 0.2f));
-        Shape cell = new RoundRectangle2D.Float(x, y, size, size, arc, arc);
-        Stroke old = g2.getStroke();
-        g2.setStroke(new BasicStroke(Math.max(1f, size * 0.05f)));
-        g2.setColor(stroke);
-        g2.draw(cell);
-        g2.setStroke(old);
-    }
-
     private static void fillRoundedWithTexture(Graphics2D g2, int x, int y, int size,
                                                TexturePaint tp, Color border) {
         int arc = Math.max(4, Math.round(size * 0.2f));
