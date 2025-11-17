@@ -28,7 +28,7 @@ dependencies {
 // Apply a specific Java toolchain to ease working on different environments.
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+        languageVersion = JavaLanguageVersion.of(11)
     }
 }
 
@@ -46,4 +46,18 @@ tasks.named('test') {
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
+    // JAR이 Java 11에서 실행되도록 호환성 설정
+    options.release.set(11)
+}
+// 실행 가능한 JAR 생성
+jar {
+    manifest {
+        attributes(
+            'Main-Class': 'se.tetris.team3.Tetris'
+        )
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
 }

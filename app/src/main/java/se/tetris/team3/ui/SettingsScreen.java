@@ -35,63 +35,98 @@ public class SettingsScreen implements Screen {
     @Override
     public void onKeyPressed(KeyEvent e) {
         switch (e.getKeyCode()) {
-            case KeyEvent.VK_UP -> index = (index + items.length - 1) % items.length;
-            case KeyEvent.VK_DOWN -> index = (index + 1) % items.length;
-            case KeyEvent.VK_ENTER -> onEnter();
-            case KeyEvent.VK_ESCAPE -> app.showScreen(new MenuScreen(app));
+            case KeyEvent.VK_UP:
+                index = (index + items.length - 1) % items.length;
+                break;
+            case KeyEvent.VK_DOWN:
+                index = (index + 1) % items.length;
+                break;
+            case KeyEvent.VK_ENTER:
+                onEnter();
+                break;
+            case KeyEvent.VK_ESCAPE:
+                app.showScreen(new MenuScreen(app));
+                break;
         }
         app.repaint();
     }
 
     private void onEnter() {
         switch (index) {
-            case 0 -> { // 프리셋 순환
+            case 0:
+                // 프리셋 순환
                 cyclePresetInPlace();
                 SettingsStore.save(settings);
                 app.setSize(settings.resolveWindowSize());
-            }
-            case 1 -> { // 난이도 순환
+                break;
+            case 1:
+                // 난이도 순환
                 cycleDifficulty();
                 SettingsStore.save(settings);
-            }
-            case 2 -> { // 키 설정 화면으로 이동
+                break;
+            case 2:
+                // 키 설정 화면으로 이동
                 app.showScreen(new KeymapScreen(app));
                 return;
-            }
-            case 3 -> { // 색맹 모드 토글
+            case 3:
+                // 색맹 모드 토글
                 settings.setColorBlindMode(!settings.isColorBlindMode());
                 SettingsStore.save(settings);
-            }
-            case 4 -> { // 스코어 초기화
+                break;
+            case 4:
+                // 스코어 초기화
                 SettingsStore.resetScores();
                 javax.swing.JOptionPane.showMessageDialog(null, "스코어가 초기화되었습니다.");
-            }
-            case 5 -> { // 기본값 복원
+                break;
+            case 5:
+                // 기본값 복원
                 settings.resetDefaults();
                 SettingsStore.save(settings);
                 app.setSize(settings.resolveWindowSize());
-            }
-            case 6 -> app.showScreen(new MenuScreen(app)); // 뒤로가기
+                break;
+            case 6:
+                app.showScreen(new MenuScreen(app)); // 뒤로가기
+                break;
         }
     }
 
     private void cyclePresetInPlace() {
         Settings.SizePreset cur = settings.getSizePreset();
-        Settings.SizePreset next = switch (cur) {
-            case SMALL -> Settings.SizePreset.MEDIUM;
-            case MEDIUM -> Settings.SizePreset.LARGE;
-            case LARGE -> Settings.SizePreset.SMALL;
-        };
+        Settings.SizePreset next;
+        switch (cur) {
+            case SMALL:
+                next = Settings.SizePreset.MEDIUM;
+                break;
+            case MEDIUM:
+                next = Settings.SizePreset.LARGE;
+                break;
+            case LARGE:
+                next = Settings.SizePreset.SMALL;
+                break;
+            default:
+                next = Settings.SizePreset.MEDIUM;
+                break;
+        }
         settings.setSizePreset(next);
     }
 
     private void cycleDifficulty() {
         Settings.Difficulty cur = settings.getDifficulty();
-        Settings.Difficulty next = switch (cur) {
-            case EASY -> Settings.Difficulty.NORMAL;
-            case NORMAL -> Settings.Difficulty.HARD;
-            case HARD -> Settings.Difficulty.EASY;
-        };
+        Settings.Difficulty next;
+        switch (cur) {
+            case EASY:
+                next = Settings.Difficulty.NORMAL;
+                break;
+            case NORMAL:
+                next = Settings.Difficulty.HARD;
+                break;
+            case HARD:
+                next = Settings.Difficulty.EASY;
+                break;
+            default:
+                next = Settings.Difficulty.NORMAL;
+                break;
+        }
         settings.setDifficulty(next);
     }
 
@@ -132,11 +167,15 @@ public class SettingsScreen implements Screen {
     }
 
     private String formatItem(int i) {
-        return switch (i) {
-            case 0 -> String.format(items[i], settings.getSizePreset().name());
-            case 1 -> String.format(items[i], settings.getDifficulty().name()); // 난이도 표시
-            case 3 -> String.format(items[i], settings.isColorBlindMode() ? "ON" : "OFF");
-            default -> items[i];
-        };
+        switch (i) {
+            case 0:
+                return String.format(items[i], settings.getSizePreset().name());
+            case 1:
+                return String.format(items[i], settings.getDifficulty().name()); // 난이도 표시
+            case 3:
+                return String.format(items[i], settings.isColorBlindMode() ? "ON" : "OFF");
+            default:
+                return items[i];
+        }
     }
 }

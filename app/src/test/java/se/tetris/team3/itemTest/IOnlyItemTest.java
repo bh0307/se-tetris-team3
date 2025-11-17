@@ -1,5 +1,7 @@
 package se.tetris.team3.itemTest;
 
+import java.lang.reflect.Method;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
@@ -44,7 +46,7 @@ public class IOnlyItemTest {
             // public 메서드 시도
             GameManager.class.getMethod("activateIOnlyMode", int.class).invoke(gm, ms);
         } catch (NoSuchMethodException e) {
-            var m = GameManager.class.getDeclaredMethod("activateIOnlyMode", int.class);
+            Method m = GameManager.class.getDeclaredMethod("activateIOnlyMode", int.class);
             m.setAccessible(true);
             m.invoke(gm, ms);
         }

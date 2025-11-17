@@ -89,26 +89,34 @@ public class NameInputScreen implements Screen {
         int keyCode = e.getKeyCode();
 
         switch (keyCode) {
-            case KeyEvent.VK_ENTER, KeyEvent.VK_ESCAPE -> {
+            case KeyEvent.VK_ENTER:
                 // 이름 확정 (비었으면 Anonymous)
-                String trimmedName = playerName.toString().trim();
-                String finalName = trimmedName.isEmpty() ? "Anonymous" : trimmedName;
-
-                // 현재 모드 및 난이도로 저장
-                scoreManager.addScore(mode, app.getSettings().getDifficulty(), finalName, playerScore);
-
-                // 스코어보드는 내부에서 현재 모드로 읽도록 이미 수정했음
-                app.showScreen(new ScoreboardScreen(app, finalName, playerScore, scoreManager));
-            }
-            case KeyEvent.VK_BACK_SPACE -> {
+                {
+                    String trimmedName = playerName.toString().trim();
+                    String finalName = trimmedName.isEmpty() ? "Anonymous" : trimmedName;
+                    // 현재 모드 및 난이도로 저장
+                    scoreManager.addScore(mode, app.getSettings().getDifficulty(), finalName, playerScore);
+                    // 스코어보드는 내부에서 현재 모드로 읽도록 이미 수정했음
+                    app.showScreen(new ScoreboardScreen(app, finalName, playerScore, scoreManager));
+                }
+                break;
+            case KeyEvent.VK_ESCAPE:
+                {
+                    String trimmedName = playerName.toString().trim();
+                    String finalName = trimmedName.isEmpty() ? "Anonymous" : trimmedName;
+                    scoreManager.addScore(mode, app.getSettings().getDifficulty(), finalName, playerScore);
+                    app.showScreen(new ScoreboardScreen(app, finalName, playerScore, scoreManager));
+                }
+                break;
+            case KeyEvent.VK_BACK_SPACE:
                 if (playerName.length() > 0) playerName.deleteCharAt(playerName.length() - 1);
-            }
-            default -> {
+                break;
+            default:
                 char keyChar = e.getKeyChar();
                 if (isValidNameChar(keyChar) && playerName.length() < MAX_NAME_LENGTH) {
                     playerName.append(keyChar);
                 }
-            }
+                break;
         }
         app.repaint();
     }

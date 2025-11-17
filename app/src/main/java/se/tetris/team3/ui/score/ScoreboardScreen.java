@@ -169,11 +169,18 @@ public class ScoreboardScreen implements Screen {
             drawStringEllipsis(g2, displayName, nameX, rowY, nameColW - 8);
             drawStringEllipsis(g2, String.valueOf(entry.getScore()), scoreX, rowY, scoreColW - 8);
             // 난이도 축약표기: EASY->E, NORMAL->N, HARD->H
-            String diffShort = switch (entry.getDifficulty()) {
-                case EASY -> "E";
-                case HARD -> "H";
-                default -> "N";
-            };
+            String diffShort;
+            switch (entry.getDifficulty()) {
+                case EASY:
+                    diffShort = "E";
+                    break;
+                case HARD:
+                    diffShort = "H";
+                    break;
+                default:
+                    diffShort = "N";
+                    break;
+            }
             drawStringEllipsis(g2, diffShort, diffX, rowY, diffColW - 8);
 
             // 날짜는 항상 같은 행에 표시 (너비가 부족하면 말줄임 처리)
@@ -225,20 +232,28 @@ public class ScoreboardScreen implements Screen {
     public void onKeyPressed(KeyEvent e) {
         switch (e.getKeyCode()) {
             // UP, DOWN => idx 변경(원형 이동)
-            case KeyEvent.VK_UP -> idx = (idx - 1 + items.size()) % items.size();
-            case KeyEvent.VK_DOWN -> idx = (idx + 1) % items.size();
-            
+            case KeyEvent.VK_UP:
+                idx = (idx - 1 + items.size()) % items.size();
+                break;
+            case KeyEvent.VK_DOWN:
+                idx = (idx + 1) % items.size();
+                break;
             // TAB 키로 게임 모드 전환
-            case KeyEvent.VK_TAB -> {
+            case KeyEvent.VK_TAB:
                 currentMode = (currentMode == GameMode.ITEM) ? GameMode.CLASSIC : GameMode.ITEM;
                 app.repaint();
-            }
-            
+                break;
             // 현재 항목의 action.run() 실행
-            case KeyEvent.VK_ENTER, KeyEvent.VK_SPACE -> items.get(idx).getAction().run();
-            
+            case KeyEvent.VK_ENTER:
+                items.get(idx).getAction().run();
+                break;
+            case KeyEvent.VK_SPACE:
+                items.get(idx).getAction().run();
+                break;
             // System.exit(0) 종료
-            case KeyEvent.VK_ESCAPE -> System.exit(0);
+            case KeyEvent.VK_ESCAPE:
+                System.exit(0);
+                break;
         }
         app.repaint();  // app을 통한 화면 갱신
     }

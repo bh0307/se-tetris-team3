@@ -105,9 +105,18 @@ public class GameManager {
     // 난이도별 설정 적용
     private void applyDifficultySettings() {
         switch (difficulty) {
-            case EASY -> { baseFallDelay = 700; scoreMultiplier = 0.8; } // 느린 낙하, 점수 감소
-            case NORMAL -> { baseFallDelay = 500; scoreMultiplier = 1.0; } // 기본
-            case HARD -> { baseFallDelay = 300; scoreMultiplier = 1.2; } // 빠른 낙하, 점수 보너스
+            case EASY:
+                baseFallDelay = 700;
+                scoreMultiplier = 0.8;
+                break; // 느린 낙하, 점수 감소
+            case NORMAL:
+                baseFallDelay = 500;
+                scoreMultiplier = 1.0;
+                break; // 기본
+            case HARD:
+                baseFallDelay = 300;
+                scoreMultiplier = 1.2;
+                break; // 빠른 낙하, 점수 보너스
         }
     }
 
@@ -162,9 +171,15 @@ public class GameManager {
         int baseWeight = 10;
         int iWeight;
         switch (difficulty) {
-            case EASY -> iWeight = (int) Math.round(baseWeight * 1.2);
-            case HARD -> iWeight = (int) Math.round(baseWeight * 0.8);
-            default -> iWeight = baseWeight;
+            case EASY:
+                iWeight = (int) Math.round(baseWeight * 1.2);
+                break;
+            case HARD:
+                iWeight = (int) Math.round(baseWeight * 0.8);
+                break;
+            default:
+                iWeight = baseWeight;
+                break;
         }
 
         // 블록 클래스 배열과 대응되는 가중치 배열
@@ -773,11 +788,18 @@ public void renderHUD(Graphics2D g2, int padding, int blockSize, int totalWidth)
     drawStringEllipsis(g2, "LEVEL: " + level, hudX, scoreY + lineSpacing, hudWidth - 8);
 
     // 난이도 표시 (단문: E/N/H)
-    String diffLabel = switch (difficulty) {
-        case EASY -> "E";
-        case HARD -> "H";
-        default -> "N";
-    };
+    String diffLabel;
+    switch (difficulty) {
+        case EASY:
+            diffLabel = "E";
+            break;
+        case HARD:
+            diffLabel = "H";
+            break;
+        default:
+            diffLabel = "N";
+            break;
+    }
     drawStringEllipsis(g2, "DIFFICULTY: " + diffLabel, hudX, scoreY + lineSpacing * 2, hudWidth - 8);
 
     // 다음 블록 표시

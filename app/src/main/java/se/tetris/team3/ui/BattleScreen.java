@@ -124,33 +124,47 @@ public class BattleScreen implements Screen {
 
         switch (key) {
             // Player1: WASD
-            case KeyEvent.VK_A -> p1.tryMove(p1.getBlockX() - 1, p1.getBlockY());
-            case KeyEvent.VK_D -> p1.tryMove(p1.getBlockX() + 1, p1.getBlockY());
-            case KeyEvent.VK_S -> {
+            case KeyEvent.VK_A:
+                p1.tryMove(p1.getBlockX() - 1, p1.getBlockY());
+                break;
+            case KeyEvent.VK_D:
+                p1.tryMove(p1.getBlockX() + 1, p1.getBlockY());
+                break;
+            case KeyEvent.VK_S:
                 p1.stepDownOrFix();
                 player1LastDrop = System.currentTimeMillis();
-            }
-            case KeyEvent.VK_W -> p1.rotateBlock();
+                break;
+            case KeyEvent.VK_W:
+                p1.rotateBlock();
+                break;
 
             // Player2: 화살표
-            case KeyEvent.VK_LEFT -> p2.tryMove(p2.getBlockX() - 1, p2.getBlockY());
-            case KeyEvent.VK_RIGHT -> p2.tryMove(p2.getBlockX() + 1, p2.getBlockY());
-            case KeyEvent.VK_DOWN -> {
+            case KeyEvent.VK_LEFT:
+                p2.tryMove(p2.getBlockX() - 1, p2.getBlockY());
+                break;
+            case KeyEvent.VK_RIGHT:
+                p2.tryMove(p2.getBlockX() + 1, p2.getBlockY());
+                break;
+            case KeyEvent.VK_DOWN:
                 p2.stepDownOrFix();
                 player2LastDrop = System.currentTimeMillis();
-            }
-            case KeyEvent.VK_UP -> p2.rotateBlock();
-            case KeyEvent.VK_ENTER -> {
+                break;
+            case KeyEvent.VK_UP:
+                p2.rotateBlock();
+                break;
+            case KeyEvent.VK_ENTER:
                 p2.hardDrop();
                 player2LastDrop = System.currentTimeMillis();
-            }
-            case KeyEvent.VK_SPACE -> {
+                break;
+            case KeyEvent.VK_SPACE:
                 p1.hardDrop();
                 player1LastDrop = System.currentTimeMillis();
-            }
+                break;
 
             // ESC: 메뉴로
-            case KeyEvent.VK_ESCAPE -> frame.showScreen(new MenuScreen(frame));
+            case KeyEvent.VK_ESCAPE:
+                frame.showScreen(new MenuScreen(frame));
+                break;
         }
     }
 

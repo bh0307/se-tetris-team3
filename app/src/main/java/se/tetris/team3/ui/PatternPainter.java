@@ -70,29 +70,33 @@ public final class PatternPainter {
         Color line = new Color(255,255,255,160);
         g.setColor(line);
         switch (style) {
-            case 0 -> { // /// 대각선
+            case 0:
+                // /// 대각선
                 for (int i=-sz; i<sz*2; i+=4) {
                     g.drawLine(i, 0, i+sz, sz);
                 }
-            }
-            case 1 -> { // \\ 대각선 반대
+                break;
+            case 1:
+                // \\ 대각선 반대
                 for (int i=-sz; i<sz*2; i+=4) {
                     g.drawLine(i, sz, i+sz, 0);
                 }
-            }
-            case 2 -> { // 십자격자
+                break;
+            case 2:
+                // 십자격자
                 for (int i=0; i<sz; i+=4) {
                     g.drawLine(i, 0, i, sz);
                     g.drawLine(0, i, sz, i);
                 }
-            }
-            default -> { // 점 패턴
+                break;
+            default:
+                // 점 패턴
                 for (int y=1; y<sz; y+=4) {
                     for (int x=1; x<sz; x+=4) {
                         g.fillRect(x, y, 2, 2);
                     }
                 }
-            }
+                break;
         }
         g.dispose();
         return new TexturePaint(img, new Rectangle(0,0,sz,sz)); // (0,0) 앵커
