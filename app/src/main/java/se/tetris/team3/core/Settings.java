@@ -48,9 +48,9 @@ public class Settings {
     // 창/보드 전체 스케일 — AppFrame/게임 스케일링에 사용
     public Dimension resolveWindowSize() {
         return switch (sizePreset) {
-            case SMALL -> new Dimension(360, 600);
-            case MEDIUM -> new Dimension(480, 720);
-            case LARGE -> new Dimension(600, 900);
+            case SMALL -> new Dimension(520, 680);  
+            case MEDIUM -> new Dimension(640, 900); 
+            case LARGE -> new Dimension(760, 1080); 
         };
     }
 

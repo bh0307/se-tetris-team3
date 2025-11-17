@@ -9,7 +9,8 @@ import se.tetris.team3.core.Settings;
  * 한 플레이어가 줄을 삭제하면 상대방 보드에 공격 줄을 추가합니다.
  * 시간제한 모드에서는 타이머를 관리하고, 시간 종료 시 점수로 승패를 결정합니다.
  */
-public class BattleGameManager {
+public class BattleGameManager implements LineClearListener {
+    private static final int MAX_GARBAGE_QUEUE = 10;
     
     // 왼쪽 플레이어(Player 1)와 오른쪽 플레이어(Player 2)의 게임 매니저
     private final GameManager player1Manager;
@@ -56,6 +57,42 @@ public class BattleGameManager {
         gameOver = false;
         winner = 0;
         startTime = System.currentTimeMillis();
+
+        player1Manager.setLineClearListener((gm, clearedRows, garbageRows) -> 
+            handleAttackFromPlayer(1, garbageRows)
+        );
+        player2Manager.setLineClearListener((gm, clearedRows, garbageRows) -> 
+            handleAttackFromPlayer(2, garbageRows)
+        );        
+    }
+
+    // 상대방에게 공격 줄을 보내는 내부 처리 메서드
+    private void handleAttackFromPlayer(int attacker, boolean[][] garbageRows) {
+        if (garbageRows == null || garbageRows.length == 0) return;
+
+        GameManager defender = (attacker == 1) ? player2Manager : player1Manager;
+
+        // 현재 수비측의 큐 크기 확인
+        int current = defender.getPendingGarbagePreview().size();
+        int incoming = garbageRows.length;
+
+        // “상대에게 넘길 수 있는 최대 줄 수는 10줄”
+        if (current >= MAX_GARBAGE_QUEUE) {
+            // 이미 10줄이면 더 이상 안 보냄 (무시)
+            return;
+        }
+
+        // 새로 들어오면 10줄을 넘지 않도록 자르기
+        if (current + incoming > MAX_GARBAGE_QUEUE) {
+            int allow = MAX_GARBAGE_QUEUE - current;  // 추가로 허용되는 줄 수
+            boolean[][] trimmed = new boolean[allow][];
+            for (int i = 0; i < allow; i++) {
+                trimmed[i] = garbageRows[i];
+            }
+            defender.enqueueGarbage(trimmed);
+        } else {
+            defender.enqueueGarbage(garbageRows);
+        }
     }
     
     /**
@@ -117,10 +154,34 @@ public class BattleGameManager {
             }
         }
     }
-    
-    
+
+    /**
+     * 한 GameManager가 2줄 이상을 한 번에 삭제했을 때 호출됨.
+     * 여기서 상대 플레이어에게 넘어갈 쓰레기 줄을 큐에 추가한다.
+     *
+     * @param attacker    줄을 지운 GameManager (player1 or player2)
+     * @param clearedRows 실제 삭제된 줄 인덱스들 (0 = 위쪽)
+     * @param garbageRows 공격 줄 패턴 (true = 블록, false = 빈칸)
+     */
+    @Override
+    public void onAttack(GameManager attacker, int[] clearedRows, boolean[][] garbageRows) {
+        // 방어코드: 유효하지 않으면 무시
+        if (garbageRows == null || garbageRows.length == 0) return;
+        if (attacker == null) return;
+
+        // 누구에게서 날아온 공격인지에 따라 상대 찾기
+        GameManager defender =
+                (attacker == player1Manager) ? player2Manager :
+                (attacker == player2Manager) ? player1Manager : null;
+
+        if (defender == null) return;
+
+        // 상대 GameManager의 쓰레기 큐에 추가
+        // (큐 자체의 10줄 제한 로직은 GameManager.enqueueGarbage 쪽에서 처리)
+        defender.enqueueGarbage(garbageRows);
+    }
+
     // Getter 메서드들
-    
     public GameManager getPlayer1Manager() {
         return player1Manager;
     }

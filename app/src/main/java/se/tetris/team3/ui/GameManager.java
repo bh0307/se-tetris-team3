@@ -18,9 +18,7 @@ import se.tetris.team3.blocks.ZBlock;
 import se.tetris.team3.core.GameMode;
 import se.tetris.team3.core.Settings;
 
-
 public class GameManager {
-
     private static final int FIELD_WIDTH = 10;
     private static final int FIELD_HEIGHT = 20;
     private static final int ANVIL_WIDTH = 4;
@@ -50,6 +48,10 @@ public class GameManager {
     private Settings.Difficulty difficulty = Settings.Difficulty.NORMAL;
     private int baseFallDelay = 500; // 기본 낙하 딜레이(ms)
     private double scoreMultiplier = 1.0;
+
+    // 대전 모드용: 줄 삭제 콜백 + 상대에게서 넘어온 쓰레기 줄 큐
+    private LineClearListener lineClearListener;
+    private final java.util.List<boolean[]> pendingGarbage = new java.util.LinkedList<>();
 
     private Settings settings;
 
@@ -119,9 +121,30 @@ public class GameManager {
     public boolean isGameOver() { return isGameOver; }
     public int getScore() { return score; }
     public int getLevel() { return level; }
+
     // 난이도 기반 기본 낙하 딜레이 접근자
     public int getBaseFallDelay() { return baseFallDelay; }
     public boolean isSpeedUp() { return speedUp; }
+
+    // 대전 모드: 줄 삭제 리스너 등록
+    public void setLineClearListener(LineClearListener listener) {
+        this.lineClearListener = listener;
+    }
+
+    // 상대에게서 넘어온 쓰레기 줄 추가 (BattleGameManager가 호출)
+    public void enqueueGarbage(boolean[][] rows) {
+        if (rows == null) return;
+        for (boolean[] r : rows) {
+            if (r != null && r.length == FIELD_WIDTH) {
+                pendingGarbage.add(r.clone());
+            }
+        }
+    }
+
+    // 쓰레기 줄 미리보기용 (BattleScreen에서 UI 그릴 때 사용)
+    public java.util.List<boolean[]> getPendingGarbagePreview() {
+        return java.util.Collections.unmodifiableList(pendingGarbage);
+    }
 
     // 테스트용 메서드
     protected Block makeRandomBlock() {
@@ -173,6 +196,9 @@ public class GameManager {
 
     // 새로운 블록 등장
     public void spawnNewBlock() {
+        // 대전 모드: 새 블록이 나오기 전에 넘어온 쓰레기 줄을 먼저 보드에 추가
+        applyPendingGarbage();
+
         currentBlock = nextBlock;
         weightLocked = false;
 
@@ -316,6 +342,31 @@ public class GameManager {
         }
     }
 
+    // 대전 모드: 대기 중인 쓰레기 줄을 모두 보드 아래에 추가
+    private void applyPendingGarbage() {
+        while (!pendingGarbage.isEmpty()) {
+            boolean[] pattern = pendingGarbage.remove(0);
+            addGarbageRowToField(pattern);
+        }
+    }
+
+    // 한 줄을 위로 밀고, 맨 아래에 pattern 모양으로 회색 블럭 추가
+    private void addGarbageRowToField(boolean[] pattern) {
+        if (pattern == null || pattern.length != FIELD_WIDTH) return;
+
+        // 윗줄부터 한 칸씩 위로 밀어 올리기
+        for (int y = 0; y < FIELD_HEIGHT - 1; y++) {
+            System.arraycopy(field[y + 1], 0, field[y], 0, FIELD_WIDTH);
+            System.arraycopy(itemField[y + 1], 0, itemField[y], 0, FIELD_WIDTH);
+        }
+
+        // 맨 아래 줄 채우기 (아이템은 없는 쓰레기 줄이므로 itemField는 0으로)
+        for (int x = 0; x < FIELD_WIDTH; x++) {
+            field[FIELD_HEIGHT - 1][x] = pattern[x] ? 1 : 0;
+            itemField[FIELD_HEIGHT - 1][x] = 0;
+        }
+    }
+
     // 한 줄 제거
     private void clearRow(int row) {
     if (row < 0 || row >= FIELD_HEIGHT) return;
@@ -416,7 +467,58 @@ public class GameManager {
         }
         return null;
     }
+
+    // 현재 필드에서 가득 찬 줄 인덱스 모으기 (실제 삭제는 하지 않음)
+    private int[] findFullRows() {
+        java.util.List<Integer> list = new java.util.ArrayList<>();
+        for (int i = 0; i < FIELD_HEIGHT; i++) {
+            boolean full = true;
+            for (int j = 0; j < FIELD_WIDTH; j++) {
+                if (field[i][j] == 0) { full = false; break; }
+            }
+            if (full) list.add(i);
+        }
+        int[] result = new int[list.size()];
+        for (int k = 0; k < list.size(); k++) result[k] = list.get(k);
+        return result;
+    }
     
+    // 줄을 삭제한 블럭 모양처럼 빈 칸이 존재
+    private boolean[][] buildGarbagePattern(int[] fullRows) {
+        if (currentBlock == null || fullRows == null || fullRows.length == 0) {
+            return new boolean[0][];
+        }
+
+        boolean[][] garbage = new boolean[fullRows.length][FIELD_WIDTH];
+
+        // 기본은 전부 채워진 상태(true)
+        for (int i = 0; i < fullRows.length; i++) {
+            java.util.Arrays.fill(garbage[i], true);
+        }
+
+        int[][] shape = currentBlock.getShape();
+
+        // 현재 블럭이 차지하고 있던 칸은 빈 칸(false)으로 만든다.
+        for (int r = 0; r < shape.length; r++) {
+            for (int c = 0; c < shape[r].length; c++) {
+                if (shape[r][c] == 0) continue;
+
+                int gx = blockX + c;
+                int gy = blockY + r;
+
+                if (gx < 0 || gx >= FIELD_WIDTH || gy < 0 || gy >= FIELD_HEIGHT) continue;
+
+                for (int i = 0; i < fullRows.length; i++) {
+                    if (fullRows[i] == gy) {
+                        garbage[i][gx] = false;
+                    }
+                }
+            }
+        }
+
+        return garbage;
+    }
+
      // 라인 제거 함수(무게추일 경우 점수 미집계)
     public void clearLines(boolean awardScore) {
         java.util.List<Integer> fullRows = new java.util.ArrayList<>();
@@ -503,6 +605,16 @@ public class GameManager {
 
 
             fixBlock();
+
+            // 대전 모드: 여기서 몇 줄이 꽉 찼는지 보고, 2줄 이상이면 공격 이벤트 발생
+            if (lineClearListener != null) {
+                int[] fullRows = findFullRows(); // 아직 clearLines() 호출 전 상태
+                if (fullRows.length >= 2) {
+                    boolean[][] garbage = buildGarbagePattern(fullRows);
+                    lineClearListener.onAttack(this, fullRows, garbage);
+                }
+            }
+
             clearLines(!isAnvil);  // 무게추는 점수 반영 안 함
             spawnNewBlock();
         } else {
@@ -541,6 +653,8 @@ public class GameManager {
         // 점수 2배 모드 초기화
         doubleScoreActive = false;
         doubleScoreTime = 0L;
+
+        pendingGarbage.clear();
 
         applyDifficultySettings();
     }
