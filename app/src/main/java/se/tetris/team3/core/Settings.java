@@ -18,7 +18,7 @@ public class Settings {
     private Difficulty difficulty = Difficulty.NORMAL;
 
     // Action: 키 리매핑용 식별자
-    public enum Action { MOVE_LEFT, MOVE_RIGHT, ROTATE, SOFT_DROP, PAUSE, EXIT }
+    public enum Action { MOVE_LEFT, MOVE_RIGHT, ROTATE, SOFT_DROP, HARD_DROP, PAUSE, EXIT }
     private final Map<Action, Integer> keymap = new EnumMap<>(Action.class);
 
     // 색맹 모드 (기본값 false)
@@ -47,20 +47,30 @@ public class Settings {
     // ===== 화면/블록 스케일링 =====
     // 창/보드 전체 스케일 — AppFrame/게임 스케일링에 사용
     public Dimension resolveWindowSize() {
-        return switch (sizePreset) {
-            case SMALL -> new Dimension(520, 680);  
-            case MEDIUM -> new Dimension(640, 900); 
-            case LARGE -> new Dimension(760, 1080); 
-        };
+        switch (sizePreset) {
+            case SMALL:
+                return new Dimension(520, 680);
+            case MEDIUM:
+                return new Dimension(640, 900);
+            case LARGE:
+                return new Dimension(760, 1080);
+            default:
+                return new Dimension(640, 900);
+        }
     }
 
     // sizePreset에 따라서 블록 사이즈가 바뀜
     public int resolveBlockSize() {
-        return switch (sizePreset) {
-            case SMALL -> 24;
-            case MEDIUM -> 30;
-            case LARGE -> 36;
-        };
+        switch (sizePreset) {
+            case SMALL:
+                return 24;
+            case MEDIUM:
+                return 30;
+            case LARGE:
+                return 36;
+            default:
+                return 30;
+        }
     }
 
     // ===== 기본값 초기화 =====
@@ -75,6 +85,7 @@ public class Settings {
         keymap.put(Action.MOVE_RIGHT, KeyEvent.VK_RIGHT);
         keymap.put(Action.ROTATE, KeyEvent.VK_UP);
         keymap.put(Action.SOFT_DROP, KeyEvent.VK_DOWN);
+            keymap.put(Action.HARD_DROP, KeyEvent.VK_SPACE); // 기본값: 스페이스바
         keymap.put(Action.PAUSE, KeyEvent.VK_P);
         keymap.put(Action.EXIT, KeyEvent.VK_ESCAPE);
     }

@@ -1,4 +1,4 @@
-package se.tetris.team3.ui;
+package se.tetris.team3.uiTest;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

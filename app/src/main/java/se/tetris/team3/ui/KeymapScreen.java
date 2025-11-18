@@ -27,6 +27,7 @@ public class KeymapScreen implements Screen {
         items.add(Action.MOVE_RIGHT);
         items.add(Action.ROTATE);
         items.add(Action.SOFT_DROP);
+        items.add(Action.HARD_DROP);
         items.add(Action.PAUSE);
         items.add(Action.EXIT);
     }
@@ -100,13 +101,19 @@ public class KeymapScreen implements Screen {
 
         // 일반 네비
         switch (code) {
-            case KeyEvent.VK_UP -> cursor = (cursor - 1 + items.size()) % items.size();
-            case KeyEvent.VK_DOWN -> cursor = (cursor + 1) % items.size();
-            case KeyEvent.VK_ENTER -> {
+            case KeyEvent.VK_UP:
+                cursor = (cursor - 1 + items.size()) % items.size();
+                break;
+            case KeyEvent.VK_DOWN:
+                cursor = (cursor + 1) % items.size();
+                break;
+            case KeyEvent.VK_ENTER:
                 waitingInput = true;
                 status = items.get(cursor).name() + " : 새 키를 눌러주세요 (ESC 취소)";
-            }
-            case KeyEvent.VK_ESCAPE -> app.showScreen(new SettingsScreen(app));
+                break;
+            case KeyEvent.VK_ESCAPE:
+                app.showScreen(new SettingsScreen(app));
+                break;
         }
         app.repaint();
     }

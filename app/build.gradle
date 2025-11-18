@@ -18,6 +18,8 @@ repositories {
 dependencies {
     // Use JUnit Jupiter for testing.
     testImplementation libs.junit.jupiter
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.9.3'
+    testImplementation 'org.mockito:mockito-core:4.11.0'
 
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
@@ -28,7 +30,26 @@ dependencies {
 // Apply a specific Java toolchain to ease working on different environments.
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+        languageVersion = JavaLanguageVersion.of(11)
+    }
+}
+
+// JaCoCo 플러그인 추가 (테스트 커버리지)
+apply plugin: 'jacoco'
+
+jacoco {
+    toolVersion = "0.8.10"
+}
+
+test {
+    finalizedBy jacocoTestReport
+}
+
+jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.required = true
+        html.required = true
     }
 }
 
@@ -46,4 +67,18 @@ tasks.named('test') {
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
+    // JAR이 Java 11에서 실행되도록 호환성 설정
+    options.release.set(11)
+}
+// 실행 가능한 JAR 생성
+jar {
+    manifest {
+        attributes(
+            'Main-Class': 'se.tetris.team3.Tetris'
+        )
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
 }

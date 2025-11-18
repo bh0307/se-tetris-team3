@@ -81,15 +81,22 @@ public class MenuScreen implements Screen {
 
     @Override public void onKeyPressed(KeyEvent e) {
         switch (e.getKeyCode()) {
-            case KeyEvent.VK_UP -> idx = (idx - 1 + items.size()) % items.size();
-            case KeyEvent.VK_DOWN -> idx = (idx + 1) % items.size();
-            case KeyEvent.VK_ENTER -> items.get(idx).getAction().run();
-            case KeyEvent.VK_ESCAPE -> System.exit(0);
-            default -> {
+            case KeyEvent.VK_UP:
+                idx = (idx - 1 + items.size()) % items.size();
+                break;
+            case KeyEvent.VK_DOWN:
+                idx = (idx + 1) % items.size();
+                break;
+            case KeyEvent.VK_ENTER:
+                items.get(idx).getAction().run();
+                break;
+            case KeyEvent.VK_ESCAPE:
+                System.exit(0);
+                break;
+            default:
                 // 유효하지 않은 키 입력 시 힌트 강조
                 showHintHighlight = true;
                 hintHighlightTime = System.currentTimeMillis();
-                
                 // 1초 후 자동으로 화면 갱신하기 위한 타이머
                 if (repaintTimer != null) {
                     repaintTimer.stop();
@@ -100,7 +107,7 @@ public class MenuScreen implements Screen {
                 });
                 repaintTimer.setRepeats(false);
                 repaintTimer.start();
-            }
+                break;
         }
         app.repaint();
     }
