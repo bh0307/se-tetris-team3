@@ -902,52 +902,66 @@ private void drawStringEllipsis(Graphics2D g2, String text, int x, int y, int ma
     }
     g2.drawString(sb.toString() + ell, x, y);
 }
+
 private static class Particle {
-    float x, y;           // 위치
-    float vx, vy;         // 속도
-    Color color;          // 색상
-    int life;             // 생명력 (프레임)
-    int maxLife;          // 최대 생명력
-    
-    public Particle(float x, float y, Color color, float vx, float vy) {
-        this.x = x;
-        this.y = y;
+    // 어떤 칸(gridX, gridY)에서 튀어나오는지 (보드 그리드 좌표)
+    float gridX, gridY;
+
+    // 그 칸 중심 기준의 픽셀 오프셋
+    float offsetX, offsetY;
+
+    float vx, vy;         // 속도(오프셋에 적용)
+    Color color;
+    int life;
+    int maxLife;
+
+    public Particle(float gridX, float gridY, Color color,
+                    float vx, float vy,
+                    float offsetX, float offsetY) {
+        this.gridX = gridX;
+        this.gridY = gridY;
         this.color = color;
         this.vx = vx;
         this.vy = vy;
-        this.maxLife = 30 + (int)(Math.random() * 20); // 30~50 프레임
+        this.offsetX = offsetX;
+        this.offsetY = offsetY;
+        this.maxLife = 30 + (int)(Math.random() * 20);
         this.life = maxLife;
     }
-    
+
     public void update() {
-        x += vx;
-        y += vy;
-        vy += 0.2f; // 중력
-        vx *= 0.98f; // 공기 저항
+        // 오프셋에만 속도 적용 (그리드 위치는 고정)
+        offsetX += vx;
+        offsetY += vy;
+        vy += 0.2f;
+        vx *= 0.98f;
         life--;
     }
-    
-    public boolean isDead() {
-        return life <= 0;
-    }
-    
-    public void render(Graphics2D g2, int blockSize) {
+
+    public boolean isDead() { return life <= 0; }
+
+    public void render(Graphics2D g2, int originX, int originY, int blockSize) {
         if (isDead()) return;
-        
-        // 생명력에 따라 투명도 조절
-        float alpha = (float)life / maxLife;
+
+        float alpha = (float) life / maxLife;
         Color fadeColor = new Color(
-            color.getRed(), 
-            color.getGreen(), 
-            color.getBlue(), 
-            (int)(255 * alpha)
+                color.getRed(),
+                color.getGreen(),
+                color.getBlue(),
+                (int) (255 * alpha)
         );
-        
         g2.setColor(fadeColor);
-        int size = Math.max(1, (int)(4 * alpha));
-        g2.fillOval((int)x, (int)y, size, size);
+
+        int size = Math.max(1, (int) (4 * alpha));
+
+        // 실제 화면 좌표: 보드 기준 + 그리드 * blockSize + center + offset
+        float px = originX + gridX * blockSize + (blockSize / 2.0f) + offsetX;
+        float py = originY + gridY * blockSize + (blockSize / 2.0f) + offsetY;
+
+        g2.fillOval((int) px, (int) py, size, size);
     }
 }
+
 
 public void updateParticles() {
     // 파티클 업데이트 및 죽은 파티클 제거 (동기화 블록 사용)
@@ -967,42 +981,38 @@ public void updateParticles() {
         System.out.println("[GameManager] I-only mode activated for " + milliseconds + " ms");
     }
 
-public void renderParticles(Graphics2D g2, int blockSize) {
-    // 렌더링 중에도 다른 스레드가 리스트를 수정할 수 있으므로 동기화
-    synchronized(particles) {
+public void renderParticles(Graphics2D g2, int originX, int originY, int blockSize) {
+    synchronized (particles) {
         for (Particle particle : particles) {
-            particle.render(g2, blockSize);
+            particle.render(g2, originX, originY, blockSize);
         }
     }
 }
 
 // 블록 파괴 효과 생성
 private void addBreakEffect(int gridX, int gridY) {
-    float centerX = gridX * 30 + 15;
-    float centerY = gridY * 30 + 15;
     Color blockColor = Color.LIGHT_GRAY;
-    
-    // 8~12개의 파티클 생성
+
     int particleCount = 8 + (int)(Math.random() * 5);
-    
+
     for (int i = 0; i < particleCount; i++) {
-        // 랜덤한 방향과 속도
-        float angle = (float)(Math.random() * 2 * Math.PI);
-        float speed = 2 + (float)(Math.random() * 4); // 2~6 픽셀/프레임
-        
-        float vx = (float)(Math.cos(angle) * speed);
-        float vy = (float)(Math.sin(angle) * speed) - 1; // 약간 위로 튀어오르게
-        
-        // 블록 중심에서 약간씩 다른 위치에서 시작
-        float offsetX = -8 + (float)(Math.random() * 16);
-        float offsetY = -8 + (float)(Math.random() * 16);
-        
+        float angle = (float) (Math.random() * 2 * Math.PI);
+        float speed = 2 + (float) (Math.random() * 4);
+
+        float vx = (float) (Math.cos(angle) * speed);
+        float vy = (float) (Math.sin(angle) * speed) - 1;
+
+        float offsetX = -8 + (float) (Math.random() * 16);
+        float offsetY = -8 + (float) (Math.random() * 16);
+
         particles.add(new Particle(
-            centerX + offsetX, 
-            centerY + offsetY, 
-            blockColor, 
-            vx, 
-            vy
+                gridX,
+                gridY,
+                blockColor,
+                vx,
+                vy,
+                offsetX,
+                offsetY
         ));
     }
 }

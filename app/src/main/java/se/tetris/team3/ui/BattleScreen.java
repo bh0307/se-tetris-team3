@@ -351,6 +351,8 @@ public class BattleScreen implements Screen {
             }
         }
 
+        manager.renderParticles(g2, x, y, blockSize);
+
         // NEXT + GARBAGE 박스 배치
         int nextX = x + boardWidth + 10;
         int nextTopY = y + blockSize;                        // 보드 위에서 한 칸 내려온 위치

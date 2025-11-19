@@ -263,7 +263,7 @@ public class GameScreen implements Screen {
             }
             int width = app.getWidth();
             manager.renderHUD(g2, padding, blockSize, width);
-            manager.renderParticles(g2, blockSize);
+            manager.renderParticles(g2, padding, padding, blockSize);
         } else {
             // GAME OVER
             g2.setColor(Color.RED);
