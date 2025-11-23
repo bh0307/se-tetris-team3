@@ -31,9 +31,14 @@ public class MenuScreen implements Screen {
             app.getSettings().setGameMode(GameMode.ITEM);
             app.showScreen(new GameScreen(app, new GameManager(GameMode.ITEM)));
         }));
+
         items.add(new MenuItem("대전 모드", () -> app.showScreen(new BattleModeSelectScreen(app, app.getSettings()))));
+        items.add(new MenuItem("P2P 대전 모드", () ->app.showScreen(new P2PLobbyScreen(app, app.getSettings()))));
+
         items.add(new MenuItem("설정", () -> app.showScreen(new SettingsScreen(app))));
+
         items.add(new MenuItem("스코어보드", () -> app.showScreen(new ScoreboardScreen(app, -1, new ScoreManager()))));
+
         items.add(new MenuItem("종료", () -> System.exit(0)));
     }
 
