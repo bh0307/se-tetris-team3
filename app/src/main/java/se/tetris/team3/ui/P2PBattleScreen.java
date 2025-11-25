@@ -311,6 +311,15 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
                 }
                 break;
 
+            case PAUSE_STATE: 
+                // 상대가 P 눌러서 보낸 상태에 맞춰서 나도 같이 멈추거나 풀기
+                this.paused = msg.paused;
+                if (connection != null) {
+                    connection.setIdleTimeoutEnabled(!this.paused);
+                }
+                frame.repaint();
+                break;
+
             case LAG_WARNING:
                 lagMessage = msg.text;
                 break;
@@ -446,25 +455,39 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
     }
 
     // ────────── 입력 처리 ──────────
-
     @Override
     public void onKeyPressed(KeyEvent e) {
         int key = e.getKeyCode();
 
         if (gameOver) {
             if (key == KeyEvent.VK_ESCAPE) {
+                // 완전히 P2P 모드 종료 → 연결 닫고 메인 메뉴
+                safeCloseConnection();
                 frame.showScreen(new MenuScreen(frame));
             } else if (key == KeyEvent.VK_ENTER) {
-                // 다시 P2P 로비로
-                frame.showScreen(new P2PLobbyScreen(frame, settings));
+                // 게임 끝난 후, 같은 연결 상태로 "READY 대기 로비"로 복귀
+                P2PLobbyScreen lobby =
+                        P2PLobbyScreen.reopenAfterGame(frame, settings, connection, asServer);
+                frame.showScreen(lobby);
             }
             return;
         }
 
-        if (key == KeyEvent.VK_P) {
+        if (key == KeyEvent.VK_P && !gameOver) {
+            // 내 일시정지 토글
             paused = !paused;
+
+            // 네트워크로 일시정지 상태 전파
+            if (connection != null) {
+                connection.send(P2PMessage.pauseState(paused));
+
+                // 멈춰 있는 동안에는 타임아웃 끄기 / 풀리면 다시 켜기
+                connection.setIdleTimeoutEnabled(!paused);
+            }
+            frame.repaint();
             return;
         }
+
         if (paused) return;
 
         switch (key) {
@@ -491,11 +514,19 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
                 lastDrop = System.currentTimeMillis();
                 break;
             case KeyEvent.VK_ESCAPE:
+                // 게임 도중 ESC 누르면 그냥 P2P 완전 종료
+                safeCloseConnection();
                 frame.showScreen(new MenuScreen(frame));
                 break;
         }
     }
 
+    private void safeCloseConnection() {
+        try {
+            if (connection != null) connection.close();
+        } catch (Exception ignore) {}
+    }
+    
     // ────────── 렌더링 ──────────
 
     @Override
@@ -593,7 +624,7 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
         g2.setColor(Color.GRAY);
         g2.drawRect(x, y, boardWidth, boardHeight);
 
-        // 필드 + 아이템
+        // 필드 + 아이템(고정 블록)
         for (int row = 0; row < 20; row++) {
             for (int col = 0; col < 10; col++) {
                 int cellX = x + col * blockSize;
@@ -612,9 +643,49 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
                 }
             }
         }
+
+        // === 여기부터 "현재 떨어지는 블록" 그리기 추가 ===
+        if (!myManager.isGameOver() && myManager.getCurrentBlock() != null) {
+            Block cur = myManager.getCurrentBlock();
+            int[][] shape = cur.getShape();
+            Color color = cur.getColor();
+            int baseX = myManager.getBlockX();
+            int baseY = myManager.getBlockY();
+
+            Integer ir = null, ic = null;
+            if (cur.getItemType() != 0) {
+                try {
+                    ir = (Integer) cur.getClass().getMethod("getItemRow").invoke(cur);
+                    ic = (Integer) cur.getClass().getMethod("getItemCol").invoke(cur);
+                } catch (Exception ignore) {}
+            }
+
+            g2.setColor(color);
+            for (int r = 0; r < shape.length; r++) {
+                for (int c = 0; c < shape[r].length; c++) {
+                    if (shape[r][c] == 0) continue;
+
+                    int gx = baseX + c;
+                    int gy = baseY + r;
+                    if (gx < 0 || gx >= 10 || gy < 0 || gy >= 20) continue;
+
+                    int cellX = x + gx * blockSize;
+                    int cellY = y + gy * blockSize;
+                    g2.fillRect(cellX, cellY, blockSize - 1, blockSize - 1);
+
+                    if (cur.getItemType() != 0 && ir != null && ic != null &&
+                        r == ir && c == ic) {
+                        GameScreen.drawCenteredChar(
+                                g2, cellX, cellY, blockSize, cur.getItemType());
+                    }
+                }
+            }
+        }
+
         // 파티클
         myManager.renderParticles(g2, x, y, blockSize);
     }
+
 
     // ────────── 오른쪽(상대 보드) ──────────
 
