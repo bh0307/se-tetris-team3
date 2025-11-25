@@ -9,19 +9,15 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 
-/**
- * 서버/클라이언트 공통으로 사용하는 P2P 연결 래퍼.
- * - 서버 모드: startServer()
- * - 클라이언트 모드: connectTo()
- * 내부에서 수신 스레드를 돌리며, P2PConnectionListener 로 이벤트 전달.
- */
+import javax.swing.SwingUtilities;
+
 public class P2PConnection implements Closeable {
 
     public static final int DEFAULT_PORT = 34567;
-    public static final int SOCKET_TIMEOUT = 3000;      // read timeout (ms)
-    public static final int DISCONNECT_TIMEOUT = 8000;  // 이 시간 이상 응답 없으면 끊김 처리
+    public static final int SOCKET_TIMEOUT = 3000;
+    public static final int DISCONNECT_TIMEOUT = 8000;
 
-    private P2PConnectionListener listener;
+    private volatile P2PConnectionListener listener;
     private volatile boolean running;
     private boolean isServer;
 
@@ -32,6 +28,11 @@ public class P2PConnection implements Closeable {
 
     private long lastReceiveTime;
 
+    private volatile boolean idleTimeoutEnabled = true; //기본: 켜짐
+
+    public P2PConnection() {
+    }
+
     public P2PConnection(P2PConnectionListener listener) {
         this.listener = listener;
     }
@@ -39,7 +40,12 @@ public class P2PConnection implements Closeable {
     public void setListener(P2PConnectionListener listener) {
         this.listener = listener;
     }
-    
+
+    // 로비에서는 false, 게임 중에는 true 로 사용하는 플래그
+    public void setIdleTimeoutEnabled(boolean enabled) {
+        this.idleTimeoutEnabled = enabled;
+    }
+
     public boolean isServer() {
         return isServer;
     }
@@ -55,34 +61,49 @@ public class P2PConnection implements Closeable {
         }
     }
 
-    // 서버로 동작
+    // ────────── 서버 모드 ──────────
     public void startServer() {
         isServer = true;
         new Thread(() -> {
             try {
                 serverSocket = new ServerSocket(DEFAULT_PORT);
+                deliverConnected(true);        // UI 에서 "서버 대기 시작" 등 표시할 수도 있음
                 socket = serverSocket.accept();
                 initStreams();
-                listener.onConnected(true);
+                deliverConnected(true);        // 실제 연결 완료
                 startReadLoop();
             } catch (IOException e) {
-                listener.onNetworkError(e);
+                deliverNetworkError(e);
                 closeSilently();
             }
         }, "P2P-Server-Accept").start();
     }
 
-    // 클라이언트로 동작
-    public void connectTo(String host) {
+    // ────────── 클라이언트 모드 ──────────
+    public void connectTo(String addr) {
         isServer = false;
         new Thread(() -> {
             try {
-                socket = new Socket(host, DEFAULT_PORT);
+                // "ip" or "ip:port" 지원
+                String host = addr.trim();
+                int port = DEFAULT_PORT;
+                int idx = host.indexOf(':');
+                if (idx >= 0) {
+                    String portStr = host.substring(idx + 1).trim();
+                    host = host.substring(0, idx).trim();
+                    try {
+                        port = Integer.parseInt(portStr);
+                    } catch (NumberFormatException ignore) {
+                        // 잘못된 포트면 기본 포트 사용
+                    }
+                }
+
+                socket = new Socket(host, port);
                 initStreams();
-                listener.onConnected(false);
+                deliverConnected(false);
                 startReadLoop();
             } catch (IOException e) {
-                listener.onNetworkError(e);
+                deliverNetworkError(e);
                 closeSilently();
             }
         }, "P2P-Client-Connect").start();
@@ -103,7 +124,7 @@ public class P2PConnection implements Closeable {
             out.writeObject(msg);
             out.flush();
         } catch (IOException e) {
-            listener.onNetworkError(e);
+            deliverNetworkError(e);
             closeSilently();
         }
     }
@@ -117,26 +138,52 @@ public class P2PConnection implements Closeable {
                         if (!(obj instanceof P2PMessage)) continue;
                         P2PMessage msg = (P2PMessage) obj;
                         lastReceiveTime = System.currentTimeMillis();
-                        listener.onMessageReceived(msg);
+                        deliverMessage(msg);
                     } catch (SocketTimeoutException toe) {
+                        if (!idleTimeoutEnabled) { // 로비는 타임아웃 건너뛰기
+                            continue;
+                        }
+
                         long now = System.currentTimeMillis();
                         if (now - lastReceiveTime > DISCONNECT_TIMEOUT) {
-                            listener.onDisconnected("상대방 응답 없음");
+                            deliverDisconnected("상대방 응답 없음");
                             break;
                         } else if (now - lastReceiveTime > SOCKET_TIMEOUT * 2) {
-                            // 랙 경고
-                            listener.onMessageReceived(
-                                P2PMessage.lagWarning("네트워크 지연: " + (now - lastReceiveTime) + "ms")
-                            );
+                            deliverMessage(P2PMessage.lagWarning(
+                                    "네트워크 지연: " + (now - lastReceiveTime) + "ms"));
                         }
                     }
                 }
             } catch (Exception e) {
-                listener.onNetworkError(e);
+                deliverNetworkError(e);
             } finally {
                 closeSilently();
             }
         }, "P2P-ReadLoop").start();
+    }
+
+    private void deliverConnected(boolean asServer) {
+        P2PConnectionListener l = listener;
+        if (l == null) return;
+        SwingUtilities.invokeLater(() -> l.onConnected(asServer));
+    }
+
+    private void deliverDisconnected(String reason) {
+        P2PConnectionListener l = listener;
+        if (l == null) return;
+        SwingUtilities.invokeLater(() -> l.onDisconnected(reason));
+    }
+
+    private void deliverNetworkError(Exception e) {
+        P2PConnectionListener l = listener;
+        if (l == null) return;
+        SwingUtilities.invokeLater(() -> l.onNetworkError(e));
+    }
+
+    private void deliverMessage(P2PMessage msg) {
+        P2PConnectionListener l = listener;
+        if (l == null) return;
+        SwingUtilities.invokeLater(() -> l.onMessageReceived(msg));
     }
 
     private void closeSilently() {

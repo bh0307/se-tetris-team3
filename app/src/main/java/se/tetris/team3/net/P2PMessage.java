@@ -26,7 +26,8 @@ public class P2PMessage implements Serializable {
         ATTACK,         // 쓰레기 줄 정보
         LAG_WARNING,    // 랙 경고 메시지
         ERROR,          // 오류 메시지
-        DISCONNECT      // 연결 종료
+        DISCONNECT,      // 연결 종료
+        PAUSE_STATE     // 일시정지 상태
     }
 
     public Type type;
@@ -43,6 +44,9 @@ public class P2PMessage implements Serializable {
 
     // ATTACK
     public boolean[][] garbageRows;
+
+    // PAUSE_STATE
+    public boolean paused;
 
     // STATE (게임 중 상태 스냅샷) 
     public int myScore;
@@ -108,6 +112,13 @@ public class P2PMessage implements Serializable {
         P2PMessage m = new P2PMessage();
         m.type = Type.ATTACK;
         m.garbageRows = rows;
+        return m;
+    }
+
+        public static P2PMessage pauseState(boolean paused) {
+        P2PMessage m = new P2PMessage();
+        m.type = Type.PAUSE_STATE;
+        m.paused = paused;
         return m;
     }
 
