@@ -296,7 +296,13 @@ public class GameManager {
     public boolean tryMove(int newX, int newY) {
         if ((currentBlock instanceof AnvilItemBlock) && weightLocked && newX != blockX) return false;
         if (isCollision(newX, newY, currentBlock.getShape())) return false;
-        blockX = newX; blockY = newY; return true;
+        // 아래로 한 칸 이동 시 점수는 항상 1점만 증가 (난이도, 배율 무시)
+        if (newX == blockX && newY == blockY + 1) {
+            score += 1;
+        }
+        blockX = newX;
+        blockY = newY;
+        return true;
     }
 
     // 블록 회전
@@ -637,11 +643,6 @@ public class GameManager {
 
             clearLines(!isAnvil);  // 무게추는 점수 반영 안 함
             spawnNewBlock();
-        } else {
-            //score += Math.round((1 + (level - 1) * 5) * scoreMultiplier);
-            score += getScoreWithMultiplier((1 + (level - 1) * 5) * scoreMultiplier);
-
-            // System.err.println(getScoreWithMultiplier((1 + (level - 1) * 5) * scoreMultiplier)); 검증용
         }
     }
 
