@@ -196,7 +196,7 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
 
         // 현재 블록
         if (!myManager.isGameOver() && myManager.getCurrentBlock() != null) {
-            var cur = myManager.getCurrentBlock();
+            Block cur = myManager.getCurrentBlock();
             msg.curShape = deepCopy(cur.getShape());
             msg.curColor = cur.getColor();
             msg.curX = myManager.getBlockX();
@@ -216,7 +216,7 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
 
         // NEXT 블록
         if (myManager.getNextBlock() != null) {
-            var nb = myManager.getNextBlock();
+            Block nb = myManager.getNextBlock();
             msg.nextShape = deepCopy(nb.getShape());
             msg.nextColor = nb.getColor();
             msg.nextItemType = nb.getItemType();
@@ -796,7 +796,7 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
         g2.setColor(Color.DARK_GRAY);
         g2.drawRect(nextX, nextY, previewSize, previewSize);
 
-        var nb = gm.getNextBlock();
+        Block nb = gm.getNextBlock();
         int[][] shape = nb.getShape();
         Color color = nb.getColor();
 

@@ -42,7 +42,7 @@ public class SettingsStore {
             p.setProperty("gameMode", s.getGameMode().name());
 
             // 키맵 저장
-            for (var e : s.getKeymap().entrySet()) {
+            for (Map.Entry<Settings.Action, Integer> e : s.getKeymap().entrySet()) {
                 p.setProperty("key." + e.getKey().name(), Integer.toString(e.getValue()));
             }
 

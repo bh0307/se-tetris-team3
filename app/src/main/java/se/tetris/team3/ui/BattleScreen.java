@@ -1,4 +1,5 @@
 package se.tetris.team3.ui;
+import se.tetris.team3.blocks.Block;
 
 import java.awt.Color;
 import java.awt.Font;
@@ -279,7 +280,7 @@ public class BattleScreen implements Screen {
 
         // 현재 블럭 + 고스트 블록(하드 드롭 위치 미리보기)
         if (!manager.isGameOver() && manager.getCurrentBlock() != null) {
-            var cur = manager.getCurrentBlock();
+            Block cur = manager.getCurrentBlock();
             int[][] shape = cur.getShape();
             Color base = cur.getColor();
             int bx = manager.getBlockX();
