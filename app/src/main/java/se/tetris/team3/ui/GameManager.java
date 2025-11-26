@@ -104,19 +104,18 @@ public class GameManager {
 
     // 난이도별 설정 적용
     private void applyDifficultySettings() {
+        // 기본 딜레이는 1000ms (1초)
+        baseFallDelay = 1000;
         switch (difficulty) {
             case EASY:
-                baseFallDelay = 700;
                 scoreMultiplier = 0.8;
-                break; // 느린 낙하, 점수 감소
+                break; // 점수 감소
             case NORMAL:
-                baseFallDelay = 500;
                 scoreMultiplier = 1.0;
                 break; // 기본
             case HARD:
-                baseFallDelay = 300;
                 scoreMultiplier = 1.2;
-                break; // 빠른 낙하, 점수 보너스
+                break; // 점수 보너스
         }
     }
 
@@ -696,17 +695,25 @@ public class GameManager {
     // 게임 타이머 딜레이 계산 (느린 모드 적용)
     public int getGameTimerDelay() {
         // 기본 딜레이 계산
-    int base = baseFallDelay;
-    int lvl = Math.max(1, level);
-    // 레벨이 오를 때마다 감소하는 폭을 완화: 이전(100ms/level) -> 변경(50ms/level)
-    int perLevelDecrease = 50; // ms 감소량
-    int delay = Math.max(50, base - (lvl - 1) * perLevelDecrease);
-        
+        int base = baseFallDelay;
+        int lvl = Math.max(1, level);
+        int perLevelDecrease;
+        switch (difficulty) {
+            case EASY:
+                perLevelDecrease = 160; // 20% 덜 증가
+                break;
+            case HARD:
+                perLevelDecrease = 240; // 20% 더 증가
+                break;
+            default:
+                perLevelDecrease = 200; // NORMAL
+                break;
+        }
+        int delay = Math.max(50, base - (lvl - 1) * perLevelDecrease);
         // 느린 모드가 활성화되면 속도를 절반(딜레이 2배)으로
         if (slowModeActive) {
             delay *= 2;
         }
-        
         return delay;
     }
     
