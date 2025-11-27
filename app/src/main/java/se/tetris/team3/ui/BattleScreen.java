@@ -1,4 +1,5 @@
 package se.tetris.team3.ui;
+import se.tetris.team3.blocks.Block;
 
 import java.awt.Color;
 import java.awt.Font;
@@ -279,7 +280,7 @@ public class BattleScreen implements Screen {
 
         // 현재 블럭 + 고스트 블록(하드 드롭 위치 미리보기)
         if (!manager.isGameOver() && manager.getCurrentBlock() != null) {
-            var cur = manager.getCurrentBlock();
+            Block cur = manager.getCurrentBlock();
             int[][] shape = cur.getShape();
             Color base = cur.getColor();
             int bx = manager.getBlockX();
@@ -368,21 +369,25 @@ public class BattleScreen implements Screen {
         int lineH = fontSize + 3;
 
         if (playerNum == 1) {
-            String c1 = "A/D: Move";
+            String c1 = "A/D: Move Left/Right";
             String c2 = "W: Rotate";
-            String c3 = "S: Drop";
+            String c3 = "S: Soft Drop";
+            String c4 = "SPACE: Hard Drop";
             int yBase = y + boardHeight + 15;
             g2.drawString(c1, x + (boardWidth - g2.getFontMetrics().stringWidth(c1)) / 2, yBase);
             g2.drawString(c2, x + (boardWidth - g2.getFontMetrics().stringWidth(c2)) / 2, yBase + lineH);
             g2.drawString(c3, x + (boardWidth - g2.getFontMetrics().stringWidth(c3)) / 2, yBase + lineH * 2);
+            g2.drawString(c4, x + (boardWidth - g2.getFontMetrics().stringWidth(c4)) / 2, yBase + lineH * 3);
         } else {
-            String c1 = "←/→: Move";
+            String c1 = "←/→: Move Left/Right";
             String c2 = "↑: Rotate";
-            String c3 = "↓: Drop";
+            String c3 = "↓: Soft Drop";
+            String c4 = "ENTER: Hard Drop";
             int yBase = y + boardHeight + 15;
             g2.drawString(c1, x + (boardWidth - g2.getFontMetrics().stringWidth(c1)) / 2, yBase);
             g2.drawString(c2, x + (boardWidth - g2.getFontMetrics().stringWidth(c2)) / 2, yBase + lineH);
             g2.drawString(c3, x + (boardWidth - g2.getFontMetrics().stringWidth(c3)) / 2, yBase + lineH * 2);
+            g2.drawString(c4, x + (boardWidth - g2.getFontMetrics().stringWidth(c4)) / 2, yBase + lineH * 3);
         }
     }
 

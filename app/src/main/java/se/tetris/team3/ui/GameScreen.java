@@ -6,6 +6,8 @@ import javax.swing.Timer;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
+import java.util.Map;
+import se.tetris.team3.core.GameMode;
 import se.tetris.team3.blocks.Block;
 import se.tetris.team3.core.Settings;
 import se.tetris.team3.ui.score.ScoreManager;
@@ -297,8 +299,8 @@ public class GameScreen implements Screen {
 
         if (manager.isGameOver()) {
             ScoreManager sm = new ScoreManager();
-            var mode = manager.getMode();
-            var score = manager.getScore();
+            GameMode mode = manager.getMode();
+            int score = manager.getScore();
 
             // 최고 점수이면 이름 입력 화면으로
             if (sm.isHighScore(mode, score)) {
@@ -310,7 +312,7 @@ public class GameScreen implements Screen {
             return;
         }
 
-        final var km = settings.getKeymap();
+        final Map<Settings.Action, Integer> km = settings.getKeymap();
 
         if (code == km.get(se.tetris.team3.core.Settings.Action.PAUSE)) {
             isPaused = !isPaused;

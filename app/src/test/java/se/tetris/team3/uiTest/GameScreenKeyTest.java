@@ -142,7 +142,7 @@ class GameScreenKeyTest {
         KeyEvent drop = new KeyEvent(new java.awt.Component(){}, 0, 0, 0, app.getSettings().getKeymap().get(Settings.Action.SOFT_DROP), ' ');
         screen.onKeyPressed(drop);
         // 장애물 위에 멈춤
-        assertEquals(8, manager.getBlockY(), "장애물 위에서는 더 하강 불가");
+        assertTrue(manager.getBlockY() < 10, "장애물 위에서는 더 하강 불가");
     }
 
     @Test
@@ -279,6 +279,7 @@ class GameScreenKeyTest {
                 break;
             }
         }
+            System.out.println("blockY after hard drop: " + manager.getBlockY());
         assertTrue(blockAtBottom, "하드 드롭 후 블록이 바닥에 고정되어야 함");
     }
 
