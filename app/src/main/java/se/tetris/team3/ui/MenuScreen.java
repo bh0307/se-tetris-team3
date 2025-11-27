@@ -1,12 +1,18 @@
 package se.tetris.team3.ui;
 
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.List;
+
 import javax.swing.Timer;
 
+import se.tetris.team3.audio.AudioManager;
 import se.tetris.team3.core.GameMode;
+import se.tetris.team3.core.Settings;
 import se.tetris.team3.ui.score.ScoreManager;
 import se.tetris.team3.ui.score.ScoreboardScreen;
 
@@ -30,6 +36,13 @@ public class MenuScreen implements Screen {
         items.add(new MenuItem("아이템 모드 시작", () -> {
             app.getSettings().setGameMode(GameMode.ITEM);
             app.showScreen(new GameScreen(app, new GameManager(GameMode.ITEM)));
+        }));
+        
+        items.add(new MenuItem("AI 모드", () -> {
+            // AI와 1:1 대전 (일반 대전 모드)
+            Settings settings = app.getSettings();
+            BattleScreen aiScreen = new BattleScreen(app, GameMode.BATTLE_NORMAL, settings, 0, true);
+            app.showScreen(aiScreen);
         }));
 
         items.add(new MenuItem("대전 모드", () -> app.showScreen(new BattleModeSelectScreen(app, app.getSettings()))));
@@ -98,6 +111,10 @@ public class MenuScreen implements Screen {
             case KeyEvent.VK_ESCAPE:
                 System.exit(0);
                 break;
+            case KeyEvent.VK_M:
+                // M키로 음소거 토글
+                AudioManager.getInstance().toggleMute();
+                break;
             default:
                 // 유효하지 않은 키 입력 시 힌트 강조
                 showHintHighlight = true;
@@ -117,7 +134,14 @@ public class MenuScreen implements Screen {
         app.repaint();
     }
     //필요시 포커스 관련 처리 추가 가능
-    @Override public void onShow() {}
+    @Override public void onShow() {
+        // 메뉴 BGM 재생 (없으면 조용히 무시)
+        try {
+            AudioManager.getInstance().playBGM("/audio/menu_theme.wav");
+        } catch (Exception e) {
+            // 오디오 파일이 없어도 게임은 계속 진행
+        }
+    }
     //필요시 리소스 정리
     @Override public void onHide() {
         if (repaintTimer != null) {

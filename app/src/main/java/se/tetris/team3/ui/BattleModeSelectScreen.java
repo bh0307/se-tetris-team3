@@ -5,6 +5,7 @@ import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.event.KeyEvent;
+
 import se.tetris.team3.core.GameMode;
 import se.tetris.team3.core.Settings;
 
@@ -21,6 +22,7 @@ public class BattleModeSelectScreen implements Screen {
     
     private int selectedMode = 0;  // 0: 일반, 1: 아이템, 2: 시간제한
     private int timeLimit = 3;     // 시간제한 모드의 제한 시간 (분)
+    private boolean isAIMode = false; // Player2를 AI로 설정할지 여부
     
     private final String[] modeNames = {
         "Normal Battle",
@@ -61,6 +63,11 @@ public class BattleModeSelectScreen implements Screen {
             }
         }
         
+        // AI 모드 토글 (Tab 키)
+        else if (key == KeyEvent.VK_TAB) {
+            isAIMode = !isAIMode;
+        }
+        
         // 게임 시작 (Enter)
         else if (key == KeyEvent.VK_ENTER || key == KeyEvent.VK_SPACE) {
             startBattle();
@@ -94,7 +101,7 @@ public class BattleModeSelectScreen implements Screen {
                 mode = GameMode.BATTLE_NORMAL;
         }
         
-        BattleScreen battleScreen = new BattleScreen(frame, mode, settings, timeLimitSeconds);
+        BattleScreen battleScreen = new BattleScreen(frame, mode, settings, timeLimitSeconds, isAIMode);
         frame.showScreen(battleScreen);
     }
     
@@ -124,8 +131,24 @@ public class BattleModeSelectScreen implements Screen {
         int subtitleWidth = g2.getFontMetrics().stringWidth(subtitle);
         g2.drawString(subtitle, centerX - subtitleWidth / 2, 140);
         
+        // AI 모드 표시
+        int aiBoxY = 170;
+        if (isAIMode) {
+            g2.setColor(new Color(0, 255, 0, 50));
+            g2.fillRoundRect(centerX - 150, aiBoxY, 300, 40, 10, 10);
+            g2.setColor(Color.GREEN);
+        } else {
+            g2.setColor(new Color(128, 128, 128, 50));
+            g2.fillRoundRect(centerX - 150, aiBoxY, 300, 40, 10, 10);
+            g2.setColor(Color.GRAY);
+        }
+        g2.setFont(new Font("맑은 고딕", Font.BOLD, 16));
+        String aiText = isAIMode ? "VS COMPUTER (AI)" : "VS PLAYER 2";
+        int aiTextWidth = g2.getFontMetrics().stringWidth(aiText);
+        g2.drawString(aiText, centerX - aiTextWidth / 2, aiBoxY + 26);
+        
         // 모드 목록
-        int startY = 220;
+        int startY = 250;
         int spacing = 120;
         
         for (int i = 0; i < modeNames.length; i++) {
@@ -173,6 +196,7 @@ public class BattleModeSelectScreen implements Screen {
         String[] instructions = {
             "↑/↓ or W/S: Select Mode",
             "←/→ or A/D: Adjust Time (Time Attack Only)",
+            "TAB: Toggle AI Mode",
             "ENTER or SPACE: Start Battle",
             "ESC: Back to Menu"
         };

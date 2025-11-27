@@ -6,6 +6,7 @@ import javax.swing.Timer;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
+import se.tetris.team3.audio.AudioManager;
 import se.tetris.team3.blocks.Block;
 import se.tetris.team3.core.Settings;
 import se.tetris.team3.ui.score.ScoreManager;
@@ -34,6 +35,13 @@ public class GameScreen implements Screen {
     }
 
     @Override public void onShow() {
+    // 게임 BGM 재생
+    try {
+        AudioManager.getInstance().playBGM("/audio/game_theme.wav");
+    } catch (Exception e) {
+        // 오디오 파일이 없어도 게임은 계속 진행
+    }
+    
     // 게임 로직 타이머
     timer = new Timer(1000, new ActionListener() {
         @Override public void actionPerformed(ActionEvent e) {
