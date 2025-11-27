@@ -43,6 +43,7 @@ jacoco {
 
 test {
     finalizedBy jacocoTestReport
+    maxHeapSize = "2g"
 }
 
 jacocoTestReport {
