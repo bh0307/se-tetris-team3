@@ -233,7 +233,7 @@ public class GameScreen implements Screen {
                             if (gx>=0 && gx<REGION_COLS && gy>=0 && gy<REGION_ROWS) {
                                 int x = padding + gx * blockSize;
                                 int y = padding + gy * blockSize;
-                                PatternPainter.drawCell(g2, x, y, blockSize, ghostColor, cur, settings.isColorBlindMode());
+                                PatternPainter.drawCell(g2, x, y, blockSize, ghostColor, cur, settings.isColorBlindMode(), 80);
                             }
                         }
                     }

@@ -31,11 +31,17 @@ public final class PatternPainter {
      */
     public static void drawCell(Graphics2D g2, int x, int y, int size,
                                 Color baseColor, Block block, boolean colorBlindMode) {
+        drawCell(g2, x, y, size, baseColor, block, colorBlindMode, 160);
+    }
+
+    // alpha 파라미터 추가 버전
+    public static void drawCell(Graphics2D g2, int x, int y, int size,
+                                Color baseColor, Block block, boolean colorBlindMode, int patternAlpha) {
         if (!colorBlindMode) {
             fillRounded(g2, x, y, size, baseColor);
             return;
         }
-        TexturePaint tp = hatchForKey(block != null ? block.getClass().getSimpleName() : "default");
+        TexturePaint tp = hatchForKeyWithAlpha(block != null ? block.getClass().getSimpleName() : "default", patternAlpha);
         fillRoundedWithTexture(g2, x, y, size, tp, baseColor.darker());
     }
 
@@ -56,7 +62,7 @@ public final class PatternPainter {
     /* ========== 내부 도우미 ========== */
 
     // 키(블록 타입)에 따라 다른 해치 패턴 생성 (외부 이미지 불필요)
-    private static TexturePaint hatchForKey(String key) {
+    private static TexturePaint hatchForKeyWithAlpha(String key, int alpha) {
         int style = Math.abs(key.hashCode()) % 4; // 0~3 스타일
         int sz = 12;
         BufferedImage img = new BufferedImage(sz, sz, BufferedImage.TYPE_INT_ARGB);
@@ -67,7 +73,7 @@ public final class PatternPainter {
         g.setColor(new Color(255,255,255,0));
         g.fillRect(0,0,sz,sz);
         g.setStroke(new BasicStroke(2f));
-        Color line = new Color(255,255,255,160);
+        Color line = new Color(255,255,255,alpha);
         g.setColor(line);
         switch (style) {
             case 0:
