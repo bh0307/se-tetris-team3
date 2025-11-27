@@ -133,7 +133,7 @@ public class P2PLobbyScreen implements Screen, P2PConnectionListener {
         this.statusMessage = "연결 완료 (" + (asServer ? "Server" : "Client") + ")";
 
         // 클라이언트가 성공적으로 접속했다면 최근 IP 저장
-        if (!asServer && inputIP != null && !inputIP.isBlank()) {
+        if (!asServer && inputIP != null && !inputIP.trim().isEmpty()) {
             SettingsStore.addRecentP2PIP(inputIP.trim());
         }
 
