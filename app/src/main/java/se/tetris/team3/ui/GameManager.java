@@ -296,9 +296,16 @@ public class GameManager {
     public boolean tryMove(int newX, int newY) {
         if ((currentBlock instanceof AnvilItemBlock) && weightLocked && newX != blockX) return false;
         if (isCollision(newX, newY, currentBlock.getShape())) return false;
-        // 아래로 한 칸 이동 시 점수는 항상 1점만 증가 (난이도, 배율 무시)
+        // 아래로 한 칸 이동 시, 낙하 속도가 빨라졌으면 추가 점수 부여
         if (newX == blockX && newY == blockY + 1) {
-            score += 1;
+            int curDelay = getGameTimerDelay();
+            int baseDelay = getBaseFallDelay();
+            int bonus = 1;
+            if (curDelay < baseDelay) {
+                // 속도가 빨라질수록 더 많은 점수 (예: 1 + (baseDelay - curDelay) / 100)
+                bonus += Math.max(1, (baseDelay - curDelay) / 100);
+            }
+            score += bonus;
         }
         blockX = newX;
         blockY = newY;
