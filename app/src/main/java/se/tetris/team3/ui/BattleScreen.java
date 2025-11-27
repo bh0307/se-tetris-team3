@@ -1,4 +1,5 @@
 package se.tetris.team3.ui;
+import se.tetris.team3.ui.GhostBlockRenderer;
 import se.tetris.team3.blocks.Block;
 
 import java.awt.Color;
@@ -286,43 +287,10 @@ public class BattleScreen implements Screen {
             int bx = manager.getBlockX();
             int by = manager.getBlockY();
 
-            // 1. 하드 드롭 위치 계산
-            int ghostY = by;
-            while (true) {
-                boolean canMove = true;
-                for (int r = 0; r < shape.length; r++) {
-                    for (int c = 0; c < shape[r].length; c++) {
-                        if (shape[r][c] != 0) {
-                            int testY = ghostY + r + 1;
-                            int testX = bx + c;
-                            if (testY >= 20 || manager.getFieldValue(testY, testX) != 0) {
-                                canMove = false;
-                                break;
-                            }
-                        }
-                    }
-                    if (!canMove) break;
-                }
-                if (!canMove) break;
-                ghostY++;
-            }
-
-            // 2. 고스트 블록(연한 색) 먼저 그림
+            // 1. 하드 드롭 위치 계산 및 고스트 블록 렌더링 (공통 클래스 사용)
+            int ghostY = GhostBlockRenderer.calculateGhostY(cur, bx, by, 20, 10, (row, col) -> manager.getFieldValue(row, col));
             Color ghostColor = new Color(base.getRed(), base.getGreen(), base.getBlue(), 80); // 투명도 적용
-            for (int r = 0; r < shape.length; r++) {
-                for (int c = 0; c < shape[r].length; c++) {
-                    if (shape[r][c] != 0) {
-                        int gx = bx + c;
-                        int gy = ghostY + r;
-                        if (gx >= 0 && gx < 10 && gy >= 0 && gy < 20) {
-                            int cellX = x + gx * blockSize;
-                            int cellY = y + gy * blockSize;
-                            g2.setColor(ghostColor);
-                            g2.fillRect(cellX, cellY, blockSize - 1, blockSize - 1);
-                        }
-                    }
-                }
-            }
+            GhostBlockRenderer.renderGhostBlock(g2, cur, bx, ghostY, 20, 10, blockSize, x, y, ghostColor, settings);
 
             // 3. 실제 블록 그림
             Integer ir = null, ic = null;

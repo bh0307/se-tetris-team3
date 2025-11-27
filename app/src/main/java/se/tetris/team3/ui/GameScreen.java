@@ -1,4 +1,5 @@
 package se.tetris.team3.ui;
+import se.tetris.team3.ui.GhostBlockRenderer;
 
 import java.awt.*;
 import java.awt.event.KeyEvent;
@@ -203,41 +204,10 @@ public class GameScreen implements Screen {
                 Color base = cur.getColor();
                 int bx = manager.getBlockX(), by = manager.getBlockY();
 
-                // 1. 하드 드롭 위치 계산
-                int ghostY = by;
-                while (true) {
-                    boolean canMove = true;
-                    for (int r = 0; r < shape.length; r++) {
-                        for (int c = 0; c < shape[r].length; c++) {
-                            if (shape[r][c] != 0) {
-                                int testY = ghostY + r + 1;
-                                int testX = bx + c;
-                                if (testY >= REGION_ROWS || manager.getFieldValue(testY, testX) != 0) {
-                                    canMove = false;
-                                    break;
-                                }
-                            }
-                        }
-                        if (!canMove) break;
-                    }
-                    if (!canMove) break;
-                    ghostY++;
-                }
-
-                // 2. 고스트 블록(연한 색) 먼저 그림
+                // 1. 하드 드롭 위치 계산 및 고스트 블록 렌더링 (공통 클래스 사용)
+                int ghostY = GhostBlockRenderer.calculateGhostY(cur, bx, by, REGION_ROWS, REGION_COLS, (row, col) -> manager.getFieldValue(row, col));
                 Color ghostColor = new Color(base.getRed(), base.getGreen(), base.getBlue(), 80); // 투명도 적용
-                for (int r = 0; r < shape.length; r++) {
-                    for (int c = 0; c < shape[r].length; c++) {
-                        if (shape[r][c] != 0) {
-                            int gx = bx + c, gy = ghostY + r;
-                            if (gx>=0 && gx<REGION_COLS && gy>=0 && gy<REGION_ROWS) {
-                                int x = padding + gx * blockSize;
-                                int y = padding + gy * blockSize;
-                                PatternPainter.drawCell(g2, x, y, blockSize, ghostColor, cur, settings.isColorBlindMode(), 80);
-                            }
-                        }
-                    }
-                }
+                GhostBlockRenderer.renderGhostBlock(g2, cur, bx, ghostY, REGION_ROWS, REGION_COLS, blockSize, padding, padding, ghostColor, settings);
 
                 // 3. 실제 블록 그림
                 Integer ir = null, ic = null;
