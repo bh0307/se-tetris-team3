@@ -51,7 +51,6 @@ public class Tetris {
                 if (line.matches("\\d+")) {
                     int mhz = Integer.parseInt(line);
                     cpuGHz = mhz / 1000.0;
-                    System.out.println(cpuGHz);
                     break;
                 }
             }

@@ -67,8 +67,6 @@ tasks.named('test') {
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
-    // JAR이 Java 8에서 실행되도록 호환성 설정
-    options.release.set(8)
 }
 // 실행 가능한 JAR 생성
 jar {
