@@ -3,8 +3,9 @@ package se.tetris.team3.uiTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
+
 import se.tetris.team3.core.GameMode;
-import se.tetris.team3.ui.GameManager;
+import se.tetris.team3.gameManager.GameManager;
 
 import java.lang.reflect.Field;
 import java.util.Set;

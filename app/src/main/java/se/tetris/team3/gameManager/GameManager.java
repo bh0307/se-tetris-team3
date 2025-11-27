@@ -1,4 +1,4 @@
-package se.tetris.team3.ui;
+package se.tetris.team3.gameManager;
 
 import java.awt.Color;
 import java.awt.Font;
@@ -17,6 +17,8 @@ import se.tetris.team3.blocks.TBlock;
 import se.tetris.team3.blocks.ZBlock;
 import se.tetris.team3.core.GameMode;
 import se.tetris.team3.core.Settings;
+import se.tetris.team3.ui.render.PatternPainter;
+import se.tetris.team3.ui.screen.GameScreen;
 
 public class GameManager {
     private static final int FIELD_WIDTH = 10;

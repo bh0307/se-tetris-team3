@@ -3,8 +3,10 @@ package se.tetris.team3.blocksTest;
 import org.junit.jupiter.api.*;
 import static org.junit.jupiter.api.Assertions.*;
 import se.tetris.team3.ui.*;
+import se.tetris.team3.ui.screen.GameScreen;
 import se.tetris.team3.blocks.*;
 import se.tetris.team3.core.*;
+import se.tetris.team3.gameManager.GameManager;
 
 @DisplayName("GameScreen 블록 스폰/정렬 테스트")
 class BlockSpawnTest {

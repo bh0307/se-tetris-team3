@@ -1,4 +1,4 @@
-package se.tetris.team3.ui.score;
+package se.tetris.team3.ui.screen;
 
 import java.awt.Color;
 import java.awt.Font;
@@ -9,11 +9,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import se.tetris.team3.core.GameMode;
+import se.tetris.team3.gameManager.MenuItem;
+import se.tetris.team3.gameManager.ScoreManager;
+import se.tetris.team3.gameManager.ScoreManager.ScoreEntry;
 import se.tetris.team3.ui.AppFrame;
-import se.tetris.team3.ui.MenuItem;
-import se.tetris.team3.ui.MenuScreen;
-import se.tetris.team3.ui.Screen;
-import se.tetris.team3.ui.score.ScoreManager.ScoreEntry;
 
 // 스코어보드 화면
 // 현재 Settings의 GameMode를 읽어 모드별 상위 랭킹을 보여줌

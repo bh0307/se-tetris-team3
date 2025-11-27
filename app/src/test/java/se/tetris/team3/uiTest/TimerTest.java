@@ -3,9 +3,9 @@ package se.tetris.team3.uiTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import se.tetris.team3.gameManager.GameManager;
 import se.tetris.team3.ui.AppFrame;
-import se.tetris.team3.ui.GameManager;
-import se.tetris.team3.ui.GameScreen;
+import se.tetris.team3.ui.screen.GameScreen;
 
 import static org.junit.jupiter.api.Assertions.*;
 import javax.swing.Timer;

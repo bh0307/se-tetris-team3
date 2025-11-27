@@ -3,8 +3,13 @@ package se.tetris.team3.uiTest;
 import org.junit.jupiter.api.*;
 import static org.junit.jupiter.api.Assertions.*;
 import se.tetris.team3.ui.*;
+import se.tetris.team3.ui.screen.GameScreen;
+import se.tetris.team3.ui.screen.MenuScreen;
+import se.tetris.team3.ui.screen.NameInputScreen;
 import se.tetris.team3.core.*;
+import se.tetris.team3.gameManager.GameManager;
 import se.tetris.team3.blocks.Block;
+
 import java.awt.event.KeyEvent;
 
 @DisplayName("GameScreen 키 입력 동작 테스트")
@@ -437,7 +442,7 @@ class GameScreenKeyTest {
             java.lang.reflect.Field f = AppFrame.class.getDeclaredField("current");
             f.setAccessible(true);
             Object current = f.get(app);
-            return current instanceof se.tetris.team3.ui.score.ScoreboardScreen || current instanceof NameInputScreen;
+            return current instanceof se.tetris.team3.ui.screen.ScoreboardScreen || current instanceof NameInputScreen;
         } catch (Exception e) { return false; }
     }
 }

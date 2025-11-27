@@ -1,4 +1,4 @@
-package se.tetris.team3.ui;
+package se.tetris.team3.ui.render;
 
 import java.awt.Color;
 import java.awt.Graphics2D;

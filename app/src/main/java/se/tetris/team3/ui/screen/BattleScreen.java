@@ -1,5 +1,6 @@
-package se.tetris.team3.ui;
-import se.tetris.team3.ui.GhostBlockRenderer;
+package se.tetris.team3.ui.screen;
+import se.tetris.team3.ui.AppFrame;
+import se.tetris.team3.ui.render.GhostBlockRenderer;
 import se.tetris.team3.blocks.Block;
 
 import java.awt.Color;
@@ -12,6 +13,8 @@ import javax.swing.Timer;
 
 import se.tetris.team3.core.GameMode;
 import se.tetris.team3.core.Settings;
+import se.tetris.team3.gameManager.BattleGameManager;
+import se.tetris.team3.gameManager.GameManager;
 
 /**
  * 2인 대전 모드 화면

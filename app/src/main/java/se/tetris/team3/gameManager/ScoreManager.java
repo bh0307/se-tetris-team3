@@ -1,4 +1,4 @@
-package se.tetris.team3.ui.score;
+package se.tetris.team3.gameManager;
 
 import java.io.*;
 import java.util.*;

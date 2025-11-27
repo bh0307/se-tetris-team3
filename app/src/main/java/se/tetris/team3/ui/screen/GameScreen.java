@@ -1,5 +1,7 @@
-package se.tetris.team3.ui;
-import se.tetris.team3.ui.GhostBlockRenderer;
+package se.tetris.team3.ui.screen;
+import se.tetris.team3.ui.AppFrame;
+import se.tetris.team3.ui.render.GhostBlockRenderer;
+import se.tetris.team3.ui.render.PatternPainter;
 
 import java.awt.*;
 import java.awt.event.KeyEvent;
@@ -11,7 +13,8 @@ import java.util.Map;
 import se.tetris.team3.core.GameMode;
 import se.tetris.team3.blocks.Block;
 import se.tetris.team3.core.Settings;
-import se.tetris.team3.ui.score.ScoreManager;
+import se.tetris.team3.gameManager.GameManager;
+import se.tetris.team3.gameManager.ScoreManager;
 
 // 키 입력/타이머/렌더링, 일시정지, 게임오버 처리
 public class GameScreen implements Screen {
@@ -277,7 +280,7 @@ public class GameScreen implements Screen {
                 app.showScreen(new NameInputScreen(app, mode, score));
             } else {
                 // 최고 점수가 아니면 바로 스코어보드로
-                app.showScreen(new se.tetris.team3.ui.score.ScoreboardScreen(app, score, sm));
+                app.showScreen(new se.tetris.team3.ui.screen.ScoreboardScreen(app, score, sm));
             }
             return;
         }

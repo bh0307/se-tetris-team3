@@ -1,4 +1,4 @@
-package se.tetris.team3.ui;
+package se.tetris.team3.ui.screen;
 
 import java.awt.*;
 import java.awt.event.KeyEvent;
@@ -11,9 +11,11 @@ import javax.swing.Timer;
 import se.tetris.team3.blocks.Block;
 import se.tetris.team3.core.GameMode;
 import se.tetris.team3.core.Settings;
+import se.tetris.team3.gameManager.GameManager;
 import se.tetris.team3.net.P2PConnection;
 import se.tetris.team3.net.P2PConnectionListener;
 import se.tetris.team3.net.P2PMessage;
+import se.tetris.team3.ui.AppFrame;
 
 /**
  * P2P 대전 게임 화면

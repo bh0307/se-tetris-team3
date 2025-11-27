@@ -1,4 +1,4 @@
-package se.tetris.team3.ui;
+package se.tetris.team3.ui.screen;
 
 import java.awt.*;
 import java.awt.event.KeyEvent;
@@ -11,6 +11,7 @@ import se.tetris.team3.net.P2PConnection;
 import se.tetris.team3.net.P2PConnectionListener;
 import se.tetris.team3.net.P2PMessage;
 import se.tetris.team3.store.SettingsStore;
+import se.tetris.team3.ui.AppFrame;
 
 public class P2PLobbyScreen implements Screen, P2PConnectionListener {
 

@@ -4,7 +4,13 @@ import org.junit.jupiter.api.*;
 import static org.junit.jupiter.api.Assertions.*;
 import se.tetris.team3.ui.*;
 import se.tetris.team3.core.GameMode;
-import se.tetris.team3.ui.score.ScoreboardScreen;
+import se.tetris.team3.ui.screen.BattleModeSelectScreen;
+import se.tetris.team3.ui.screen.GameScreen;
+import se.tetris.team3.ui.screen.MenuScreen;
+import se.tetris.team3.ui.screen.P2PLobbyScreen;
+import se.tetris.team3.ui.screen.ScoreboardScreen;
+import se.tetris.team3.ui.screen.SettingsScreen;
+
 import java.awt.event.KeyEvent;
 
 @DisplayName("MenuScreen 주요 동작 테스트")

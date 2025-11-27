@@ -3,6 +3,8 @@ package se.tetris.team3.ui;
 
 import se.tetris.team3.core.Settings;
 import se.tetris.team3.store.SettingsStore;
+import se.tetris.team3.ui.screen.MenuScreen;
+import se.tetris.team3.ui.screen.Screen;
 
 import javax.swing.*;
 import java.awt.*;

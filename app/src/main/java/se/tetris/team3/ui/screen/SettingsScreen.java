@@ -1,7 +1,8 @@
-package se.tetris.team3.ui;
+package se.tetris.team3.ui.screen;
 
 import se.tetris.team3.core.Settings;
 import se.tetris.team3.store.SettingsStore;
+import se.tetris.team3.ui.AppFrame;
 
 import java.awt.*;
 import java.awt.event.KeyEvent;

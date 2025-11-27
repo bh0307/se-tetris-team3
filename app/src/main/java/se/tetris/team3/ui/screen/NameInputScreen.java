@@ -1,13 +1,13 @@
-package se.tetris.team3.ui;
+package se.tetris.team3.ui.screen;
 
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.event.KeyEvent;
 
-import se.tetris.team3.core.GameMode;        
-import se.tetris.team3.ui.score.ScoreManager;
-import se.tetris.team3.ui.score.ScoreboardScreen;
+import se.tetris.team3.core.GameMode;
+import se.tetris.team3.gameManager.ScoreManager;
+import se.tetris.team3.ui.AppFrame;
 
 public class NameInputScreen implements Screen {
     private final AppFrame app;

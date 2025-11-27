@@ -1,4 +1,4 @@
-package se.tetris.team3.ui;
+package se.tetris.team3.ui.screen;
 
 import java.awt.Color;
 import java.awt.Font;
@@ -7,6 +7,7 @@ import java.awt.RenderingHints;
 import java.awt.event.KeyEvent;
 import se.tetris.team3.core.GameMode;
 import se.tetris.team3.core.Settings;
+import se.tetris.team3.ui.AppFrame;
 
 /**
  * 대전 모드 선택 화면

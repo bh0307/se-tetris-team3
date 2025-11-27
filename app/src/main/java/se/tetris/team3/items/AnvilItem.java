@@ -1,6 +1,6 @@
 package se.tetris.team3.items;
 
-import se.tetris.team3.ui.GameManager;
+import se.tetris.team3.gameManager.GameManager;
 
 // 'W' : 낙하 중 아래 블록들을 파괴, 고정 후 좌우 이동 불가, 점수 0.
 public class AnvilItem implements Item {
