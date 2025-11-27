@@ -117,7 +117,7 @@ public class SettingsStore {
 
     /** 최근 접속한 P2P IP 를 맨 앞에 추가하고 최대 5개까지만 유지 */
     public static void addRecentP2PIP(String ip) {
-        if (ip == null || ip.isBlank()) return;
+        if (ip == null || ip.trim().isEmpty()) return;
         ip = ip.trim();
 
         Properties p = new Properties();

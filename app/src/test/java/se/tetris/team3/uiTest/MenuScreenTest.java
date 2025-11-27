@@ -69,9 +69,30 @@ class MenuScreenTest {
     }
 
     @Test
+    @DisplayName("P2P 대전 모드 메뉴 동작")
+    void testP2PLobbyMenu() {
+        setIndex(screen, 3);
+        KeyEvent enter = new KeyEvent(new java.awt.Component(){}, 0, 0, 0, KeyEvent.VK_ENTER, '\n');
+        screen.onKeyPressed(enter);
+        assertTrue(appScreenIsP2PLobby());
+    }
+
+    // P2P 대전 모드 화면 확인
+    private boolean appScreenIsP2PLobby() {
+        try {
+            java.lang.reflect.Field f = AppFrame.class.getDeclaredField("current");
+            f.setAccessible(true);
+            Object current = f.get(app);
+            return current instanceof P2PLobbyScreen;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    @Test
     @DisplayName("설정 메뉴 동작")
     void testSettingsMenu() {
-        setIndex(screen, 3);
+        setIndex(screen, 4);
         KeyEvent enter = new KeyEvent(new java.awt.Component(){}, 0, 0, 0, KeyEvent.VK_ENTER, '\n');
         screen.onKeyPressed(enter);
         assertTrue(appScreenIsSettingsScreen());
@@ -80,7 +101,7 @@ class MenuScreenTest {
     @Test
     @DisplayName("스코어보드 메뉴 동작")
     void testScoreboardMenu() {
-        setIndex(screen, 4);
+        setIndex(screen, 5);
         KeyEvent enter = new KeyEvent(new java.awt.Component(){}, 0, 0, 0, KeyEvent.VK_ENTER, '\n');
         screen.onKeyPressed(enter);
         assertTrue(appScreenIsScoreboard());
@@ -92,7 +113,7 @@ class MenuScreenTest {
         SecurityManager original = System.getSecurityManager();
         System.setSecurityManager(new NoExitSecurityManager());
         try {
-            setIndex(screen, 5);
+            setIndex(screen, 6);
             KeyEvent enter = new KeyEvent(new java.awt.Component(){}, 0, 0, 0, KeyEvent.VK_ENTER, '\n');
             assertThrows(SecurityException.class, () -> screen.onKeyPressed(enter));
         } finally {
