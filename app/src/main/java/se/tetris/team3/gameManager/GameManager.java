@@ -307,7 +307,7 @@ public class GameManager {
                 // 속도가 빨라질수록 더 많은 점수 (예: 1 + (baseDelay - curDelay) / 100)
                 bonus += Math.max(1, (baseDelay - curDelay) / 100);
             }
-            score += bonus;
+            score += getScoreWithMultiplier(bonus);
         }
         blockX = newX;
         blockY = newY;
