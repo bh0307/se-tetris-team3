@@ -23,6 +23,9 @@ public class GameManager {
     private static final int FIELD_HEIGHT = 20;
     private static final int ANVIL_WIDTH = 4;
 
+    //10줄 규칙
+    private static final int MAX_GARBAGE_QUEUE = 10;
+
     private final Random random = new Random();
 
     private int[][] field = new int[FIELD_HEIGHT][FIELD_WIDTH];
@@ -98,7 +101,6 @@ public class GameManager {
             this.settings = settings;
             difficulty = settings.getDifficulty();
             applyDifficultySettings();
-            if (settings.getGameMode() != null) this.mode = settings.getGameMode();
         }
     }
 
@@ -142,8 +144,20 @@ public class GameManager {
 
     // 상대에게서 넘어온 쓰레기 줄 추가 (BattleGameManager가 호출)
     public void enqueueGarbage(boolean[][] rows) {
-        if (rows == null) return;
-        for (boolean[] r : rows) {
+        if (rows == null || rows.length == 0) return;
+
+        int current = pendingGarbage.size();
+
+        // 이미 10줄이면, 새로 온 공격은 전부 무시
+        if (current >= MAX_GARBAGE_QUEUE) {
+            return;
+        }
+
+        // 아직 여유가 있으면, 남은 칸까지만 앞에서부터 채운다
+        int remaining = MAX_GARBAGE_QUEUE - current;
+
+        for (int i = 0; i < rows.length && i < remaining; i++) {
+            boolean[] r = rows[i];
             if (r != null && r.length == FIELD_WIDTH) {
                 pendingGarbage.add(r.clone());
             }
