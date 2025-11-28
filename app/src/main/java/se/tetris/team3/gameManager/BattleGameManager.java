@@ -10,8 +10,6 @@ import se.tetris.team3.core.Settings;
  * 시간제한 모드에서는 타이머를 관리하고, 시간 종료 시 점수로 승패를 결정합니다.
  */
 public class BattleGameManager implements LineClearListener {
-    private static final int MAX_GARBAGE_QUEUE = 10;
-    
     // 왼쪽 플레이어(Player 1)와 오른쪽 플레이어(Player 2)의 게임 매니저
     private final GameManager player1Manager;
     private final GameManager player2Manager;
@@ -71,28 +69,10 @@ public class BattleGameManager implements LineClearListener {
         if (garbageRows == null || garbageRows.length == 0) return;
 
         GameManager defender = (attacker == 1) ? player2Manager : player1Manager;
+        if (defender == null) return;
 
-        // 현재 수비측의 큐 크기 확인
-        int current = defender.getPendingGarbagePreview().size();
-        int incoming = garbageRows.length;
-
-        // “상대에게 넘길 수 있는 최대 줄 수는 10줄”
-        if (current >= MAX_GARBAGE_QUEUE) {
-            // 이미 10줄이면 더 이상 안 보냄 (무시)
-            return;
-        }
-
-        // 새로 들어오면 10줄을 넘지 않도록 자르기
-        if (current + incoming > MAX_GARBAGE_QUEUE) {
-            int allow = MAX_GARBAGE_QUEUE - current;  // 추가로 허용되는 줄 수
-            boolean[][] trimmed = new boolean[allow][];
-            for (int i = 0; i < allow; i++) {
-                trimmed[i] = garbageRows[i];
-            }
-            defender.enqueueGarbage(trimmed);
-        } else {
-            defender.enqueueGarbage(garbageRows);
-        }
+        // 10줄 제한은 GameManager.enqueueGarbage() 안에서 처리
+        defender.enqueueGarbage(garbageRows);
     }
     
     /**
@@ -165,21 +145,17 @@ public class BattleGameManager implements LineClearListener {
      */
     @Override
     public void onAttack(GameManager attacker, int[] clearedRows, boolean[][] garbageRows) {
-        // 방어코드: 유효하지 않으면 무시
-        if (garbageRows == null || garbageRows.length == 0) return;
-        if (attacker == null) return;
+        if (garbageRows == null || garbageRows.length == 0 || attacker == null) return;
 
-        // 누구에게서 날아온 공격인지에 따라 상대 찾기
-        GameManager defender =
-                (attacker == player1Manager) ? player2Manager :
-                (attacker == player2Manager) ? player1Manager : null;
+        int attackerId =
+            (attacker == player1Manager) ? 1 :
+            (attacker == player2Manager) ? 2 : -1;
 
-        if (defender == null) return;
+        if (attackerId == -1) return;
 
-        // 상대 GameManager의 쓰레기 큐에 추가
-        // (큐 자체의 10줄 제한 로직은 GameManager.enqueueGarbage 쪽에서 처리)
-        defender.enqueueGarbage(garbageRows);
+        handleAttackFromPlayer(attackerId, garbageRows);
     }
+
 
     // Getter 메서드들
     public GameManager getPlayer1Manager() {
