@@ -1,4 +1,4 @@
-package se.tetris.team3.ui;
+package se.tetris.team3.gameManager;
 
 /**
  * GameManager가 줄을 삭제했을 때 BattleGameManager에 알려주기 위한 콜백

@@ -1,4 +1,6 @@
-package se.tetris.team3.ui;
+package se.tetris.team3.ui.screen;
+import se.tetris.team3.ui.AppFrame;
+import se.tetris.team3.ui.render.GhostBlockRenderer;
 import se.tetris.team3.blocks.Block;
 
 import java.awt.Color;
@@ -11,6 +13,8 @@ import javax.swing.Timer;
 
 import se.tetris.team3.core.GameMode;
 import se.tetris.team3.core.Settings;
+import se.tetris.team3.gameManager.BattleGameManager;
+import se.tetris.team3.gameManager.GameManager;
 
 /**
  * 2인 대전 모드 화면
@@ -260,16 +264,14 @@ public class BattleScreen implements Screen {
             for (int col = 0; col < 10; col++) {
                 int cellX = x + col * blockSize;
                 int cellY = y + row * blockSize;
-
                 if (manager.isRowFlashing(row)) {
-                    // 플래시 효과
                     g2.setColor(Color.WHITE);
                     g2.fillRect(cellX, cellY, blockSize - 1, blockSize - 1);
                 } else if (manager.getFieldValue(row, col) == 1) {
-                    g2.setColor(Color.DARK_GRAY);
-                    g2.fillRect(cellX, cellY, blockSize - 1, blockSize - 1);
-
-                    // 고정 블럭에 아이템이 있으면 글자 표시
+                    se.tetris.team3.ui.render.PatternPainter.drawCell(
+                        g2, cellX, cellY, blockSize - 1,
+                        Color.DARK_GRAY, null, settings != null && settings.isColorBlindMode()
+                    );
                     char itemType = manager.getItemType(row, col);
                     if (itemType != 0) {
                         GameScreen.drawCenteredChar(g2, cellX, cellY, blockSize, itemType);
@@ -286,45 +288,10 @@ public class BattleScreen implements Screen {
             int bx = manager.getBlockX();
             int by = manager.getBlockY();
 
-            // 1. 하드 드롭 위치 계산
-            int ghostY = by;
-            while (true) {
-                boolean canMove = true;
-                for (int r = 0; r < shape.length; r++) {
-                    for (int c = 0; c < shape[r].length; c++) {
-                        if (shape[r][c] != 0) {
-                            int testY = ghostY + r + 1;
-                            int testX = bx + c;
-                            if (testY >= 20 || manager.getFieldValue(testY, testX) != 0) {
-                                canMove = false;
-                                break;
-                            }
-                        }
-                    }
-                    if (!canMove) break;
-                }
-                if (!canMove) break;
-                ghostY++;
-            }
+            int ghostY = GhostBlockRenderer.calculateGhostY(cur, bx, by, 20, 10, (row, col) -> manager.getFieldValue(row, col));
+            Color ghostColor = new Color(base.getRed(), base.getGreen(), base.getBlue(), 80);
+            GhostBlockRenderer.renderGhostBlock(g2, cur, bx, ghostY, 20, 10, blockSize, x, y, ghostColor, settings);
 
-            // 2. 고스트 블록(연한 색) 먼저 그림
-            Color ghostColor = new Color(base.getRed(), base.getGreen(), base.getBlue(), 80); // 투명도 적용
-            for (int r = 0; r < shape.length; r++) {
-                for (int c = 0; c < shape[r].length; c++) {
-                    if (shape[r][c] != 0) {
-                        int gx = bx + c;
-                        int gy = ghostY + r;
-                        if (gx >= 0 && gx < 10 && gy >= 0 && gy < 20) {
-                            int cellX = x + gx * blockSize;
-                            int cellY = y + gy * blockSize;
-                            g2.setColor(ghostColor);
-                            g2.fillRect(cellX, cellY, blockSize - 1, blockSize - 1);
-                        }
-                    }
-                }
-            }
-
-            // 3. 실제 블록 그림
             Integer ir = null, ic = null;
             if (cur.getItemType() != 0) {
                 try {
@@ -340,10 +307,11 @@ public class BattleScreen implements Screen {
                         if (gx >= 0 && gx < 10 && gy >= 0 && gy < 20) {
                             int cellX = x + gx * blockSize;
                             int cellY = y + gy * blockSize;
-                            g2.setColor(base);
-                            g2.fillRect(cellX, cellY, blockSize - 1, blockSize - 1);
-                            if (cur.getItemType() != 0 && ir != null && ic != null
-                                    && r == ir && c == ic) {
+                            se.tetris.team3.ui.render.PatternPainter.drawCell(
+                                g2, cellX, cellY, blockSize - 1,
+                                base, cur, settings != null && settings.isColorBlindMode()
+                            );
+                            if (cur.getItemType() != 0 && ir != null && ic != null && r == ir && c == ic) {
                                 GameScreen.drawCenteredChar(g2, cellX, cellY, blockSize, cur.getItemType());
                             }
                         }
@@ -424,8 +392,10 @@ public class BattleScreen implements Screen {
                 if (shape[r][c] != 0) {
                     int cellX = nextX + offsetX + c * nextBlockSize;
                     int cellY = nextY + offsetY + r * nextBlockSize;
-                    g2.setColor(color);
-                    g2.fillRect(cellX, cellY, nextBlockSize - 1, nextBlockSize - 1);
+                    se.tetris.team3.ui.render.PatternPainter.drawCell(
+                        g2, cellX, cellY, nextBlockSize - 1,
+                        color, manager.getNextBlock(), settings != null && settings.isColorBlindMode()
+                    );
                 }
             }
         }

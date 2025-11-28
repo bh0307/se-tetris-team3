@@ -1,4 +1,4 @@
-package se.tetris.team3.ui;
+package se.tetris.team3.ui.screen;
 
 import java.awt.*;
 import java.awt.event.KeyEvent;
@@ -7,8 +7,10 @@ import java.util.List;
 import javax.swing.Timer;
 
 import se.tetris.team3.core.GameMode;
-import se.tetris.team3.ui.score.ScoreManager;
-import se.tetris.team3.ui.score.ScoreboardScreen;
+import se.tetris.team3.gameManager.GameManager;
+import se.tetris.team3.gameManager.MenuItem;
+import se.tetris.team3.gameManager.ScoreManager;
+import se.tetris.team3.ui.AppFrame;
 
 // 메뉴 항목: 클래식 시작, 아이템 모드 시작, 설정, 스코어보드, 종료
 public class MenuScreen implements Screen {

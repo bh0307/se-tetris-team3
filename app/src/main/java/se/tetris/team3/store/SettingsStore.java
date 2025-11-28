@@ -4,7 +4,7 @@ import se.tetris.team3.core.GameMode;
 import se.tetris.team3.core.Settings;
 import se.tetris.team3.core.Settings.Action;
 import se.tetris.team3.core.Settings.SizePreset;
-import se.tetris.team3.ui.score.ScoreManager;
+import se.tetris.team3.gameManager.ScoreManager;
 
 import java.io.*;
 import java.nio.file.*;

@@ -6,9 +6,9 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import se.tetris.team3.core.Settings;
 import se.tetris.team3.core.Settings.Action;
+import se.tetris.team3.gameManager.GameManager;
 import se.tetris.team3.ui.AppFrame;
-import se.tetris.team3.ui.GameManager;
-import se.tetris.team3.ui.GameScreen;
+import se.tetris.team3.ui.screen.GameScreen;
 
 import java.awt.event.KeyEvent;
 

@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 import se.tetris.team3.core.GameMode;
-import se.tetris.team3.ui.GameManager;
+import se.tetris.team3.gameManager.GameManager;
 
 /**
  * D 아이템(점수 2배) 기능 테스트

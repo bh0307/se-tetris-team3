@@ -5,9 +5,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import static org.junit.jupiter.api.Assertions.*;
 
-import se.tetris.team3.ui.GameManager;
 import se.tetris.team3.ui.AppFrame;
 import se.tetris.team3.core.Settings;
+import se.tetris.team3.gameManager.GameManager;
 import se.tetris.team3.core.GameMode;
 import se.tetris.team3.blocks.*;
 

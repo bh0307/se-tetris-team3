@@ -5,12 +5,13 @@ import java.lang.reflect.Field;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.DisplayName;
 import org.mockito.Mockito;
+
 import se.tetris.team3.core.GameMode;
 import se.tetris.team3.core.Settings;
+import se.tetris.team3.gameManager.ScoreManager;
+import se.tetris.team3.gameManager.ScoreManager.ScoreEntry;
 import se.tetris.team3.ui.AppFrame;
-import se.tetris.team3.ui.score.ScoreManager;
-import se.tetris.team3.ui.score.ScoreManager.ScoreEntry;
-import se.tetris.team3.ui.score.ScoreboardScreen;
+import se.tetris.team3.ui.screen.ScoreboardScreen;
 
 import java.awt.*;
 import java.awt.event.KeyEvent;

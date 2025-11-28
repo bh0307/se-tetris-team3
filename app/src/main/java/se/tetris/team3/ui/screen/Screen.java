@@ -1,5 +1,5 @@
 // 화면 공통 인터페이스
-package se.tetris.team3.ui;
+package se.tetris.team3.ui.screen;
 
 import java.awt.Graphics2D;
 import java.awt.event.KeyEvent;
