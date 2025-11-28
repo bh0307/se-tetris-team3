@@ -1,6 +1,6 @@
 package se.tetris.team3.items;
 
-import se.tetris.team3.ui.GameManager;
+import se.tetris.team3.gameManager.GameManager;
 
 // 아이템 공통 인터페이스
 // 필요 Hook만 default로 제공: onFalling(낙하 중), onLock(고정 시)

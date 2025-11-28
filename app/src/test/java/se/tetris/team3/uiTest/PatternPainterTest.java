@@ -2,8 +2,11 @@ package se.tetris.team3.uiTest;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+
+import se.tetris.team3.ui.render.PatternPainter;
+
 import static org.junit.jupiter.api.Assertions.*;
-import se.tetris.team3.ui.PatternPainter;
+
 import java.awt.Graphics2D;
 import java.awt.Color;
 import java.awt.image.BufferedImage;

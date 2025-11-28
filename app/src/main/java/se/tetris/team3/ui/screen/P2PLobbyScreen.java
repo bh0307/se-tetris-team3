@@ -1,4 +1,4 @@
-package se.tetris.team3.ui;
+package se.tetris.team3.ui.screen;
 
 import java.awt.*;
 import java.awt.event.KeyEvent;
@@ -11,6 +11,7 @@ import se.tetris.team3.net.P2PConnection;
 import se.tetris.team3.net.P2PConnectionListener;
 import se.tetris.team3.net.P2PMessage;
 import se.tetris.team3.store.SettingsStore;
+import se.tetris.team3.ui.AppFrame;
 
 public class P2PLobbyScreen implements Screen, P2PConnectionListener {
 
@@ -133,7 +134,7 @@ public class P2PLobbyScreen implements Screen, P2PConnectionListener {
         this.statusMessage = "연결 완료 (" + (asServer ? "Server" : "Client") + ")";
 
         // 클라이언트가 성공적으로 접속했다면 최근 IP 저장
-        if (!asServer && inputIP != null && !inputIP.isBlank()) {
+        if (!asServer && inputIP != null && !inputIP.trim().isEmpty()) {
             SettingsStore.addRecentP2PIP(inputIP.trim());
         }
 

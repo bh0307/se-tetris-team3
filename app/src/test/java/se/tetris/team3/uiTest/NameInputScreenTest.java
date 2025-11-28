@@ -4,8 +4,10 @@ import org.junit.jupiter.api.*;
 import static org.junit.jupiter.api.Assertions.*;
 import se.tetris.team3.ui.*;
 import se.tetris.team3.core.*;
-import se.tetris.team3.ui.score.ScoreManager;
-import se.tetris.team3.ui.score.ScoreboardScreen;
+import se.tetris.team3.gameManager.ScoreManager;
+import se.tetris.team3.ui.screen.NameInputScreen;
+import se.tetris.team3.ui.screen.ScoreboardScreen;
+
 import java.awt.event.KeyEvent;
 
 @DisplayName("NameInputScreen 주요 동작 테스트")

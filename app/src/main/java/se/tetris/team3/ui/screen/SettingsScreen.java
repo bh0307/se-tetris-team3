@@ -1,7 +1,8 @@
-package se.tetris.team3.ui;
+package se.tetris.team3.ui.screen;
 
 import se.tetris.team3.core.Settings;
 import se.tetris.team3.store.SettingsStore;
+import se.tetris.team3.ui.AppFrame;
 
 import java.awt.*;
 import java.awt.event.KeyEvent;
@@ -76,7 +77,6 @@ public class SettingsScreen implements Screen {
             case 4:
                 // 스코어 초기화
                 SettingsStore.resetScores();
-                javax.swing.JOptionPane.showMessageDialog(null, "스코어가 초기화되었습니다.");
                 break;
             case 5:
                 // 기본값 복원

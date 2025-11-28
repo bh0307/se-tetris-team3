@@ -1,11 +1,12 @@
 package se.tetris.team3.itemTest;
 
+import java.lang.reflect.Method;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 import se.tetris.team3.core.GameMode;
-import se.tetris.team3.ui.GameManager;
+import se.tetris.team3.gameManager.GameManager;
 
 /**
  * D 아이템(점수 2배) 기능 테스트
@@ -84,7 +85,7 @@ public class DItemTest {
             GameManager.class.getMethod("activateDoubleScoreItem").invoke(gm);
         } catch (NoSuchMethodException e) {
             // private인 경우
-            var m = GameManager.class.getDeclaredMethod("activateDoubleScoreItem");
+            Method m = GameManager.class.getDeclaredMethod("activateDoubleScoreItem");
             m.setAccessible(true);
             m.invoke(gm);
         }
@@ -96,7 +97,7 @@ public class DItemTest {
             return (boolean) GameManager.class.getMethod("isDoubleScoreActive").invoke(gm);
         } catch (NoSuchMethodException e) {
             // private
-            var m = GameManager.class.getDeclaredMethod("isDoubleScoreActive");
+            Method m = GameManager.class.getDeclaredMethod("isDoubleScoreActive");
             m.setAccessible(true);
             return (boolean) m.invoke(gm);
         }
@@ -105,7 +106,7 @@ public class DItemTest {
     /** 남은 시간을 초 단위 int로 반환하는 메서드가 없을 수도 있어 optional */
     private Integer tryCallGetDoubleScoreRemainingTime(GameManager gm) {
         try {
-            var m = GameManager.class.getMethod("getDoubleScoreRemainingTime");
+            Method m = GameManager.class.getMethod("getDoubleScoreRemainingTime");
             Object r = m.invoke(gm);
             if (r instanceof Integer) return (Integer) r;
             if (r instanceof Number) return ((Number) r).intValue();
@@ -117,7 +118,7 @@ public class DItemTest {
     /** 만료 갱신 전용 메서드가 있으면 호출 (없으면 넘어감) */
     private void tryCallUpdateDoubleScore(GameManager gm) {
         try {
-            var m = GameManager.class.getMethod("updateDoubleScore");
+            Method m = GameManager.class.getMethod("updateDoubleScore");
             m.invoke(gm);
         } catch (Exception ignore) {
             // 없으면 자연 만료(시간 비교 로직이 isDoubleScoreActive 내부에 있을 수도 있음)

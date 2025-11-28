@@ -1,4 +1,4 @@
-package se.tetris.team3.ui;
+package se.tetris.team3.gameManager;
 
 public class MenuItem {
     private String label; private Runnable action;

@@ -2,7 +2,7 @@ package se.tetris.team3.scoreTest;
 
 import org.junit.jupiter.api.Test;
 
-import se.tetris.team3.ui.score.ScoreManager;
+import se.tetris.team3.gameManager.ScoreManager;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;

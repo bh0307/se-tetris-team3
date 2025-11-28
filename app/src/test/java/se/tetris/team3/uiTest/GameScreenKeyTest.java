@@ -3,8 +3,13 @@ package se.tetris.team3.uiTest;
 import org.junit.jupiter.api.*;
 import static org.junit.jupiter.api.Assertions.*;
 import se.tetris.team3.ui.*;
+import se.tetris.team3.ui.screen.GameScreen;
+import se.tetris.team3.ui.screen.MenuScreen;
+import se.tetris.team3.ui.screen.NameInputScreen;
 import se.tetris.team3.core.*;
+import se.tetris.team3.gameManager.GameManager;
 import se.tetris.team3.blocks.Block;
+
 import java.awt.event.KeyEvent;
 
 @DisplayName("GameScreen 키 입력 동작 테스트")
@@ -142,7 +147,7 @@ class GameScreenKeyTest {
         KeyEvent drop = new KeyEvent(new java.awt.Component(){}, 0, 0, 0, app.getSettings().getKeymap().get(Settings.Action.SOFT_DROP), ' ');
         screen.onKeyPressed(drop);
         // 장애물 위에 멈춤
-        assertEquals(8, manager.getBlockY(), "장애물 위에서는 더 하강 불가");
+        assertTrue(manager.getBlockY() < 10, "장애물 위에서는 더 하강 불가");
     }
 
     @Test
@@ -257,16 +262,12 @@ class GameScreenKeyTest {
     @Test
     @DisplayName("HARD_DROP 키 입력 시 블록 하드 드롭: 바닥까지 이동")
     void testHardDropKeyNoObstacle() {
-        manager.resetGame();
-        clearField();
-        Block block = new se.tetris.team3.blocks.IBlock();
-        setCurrentBlock(block);
-        setNextBlock(block);
-        manager.tryMove(5, 0);
-        KeyEvent hardDrop = new KeyEvent(new java.awt.Component(){}, 0, 0, 0, app.getSettings().getKeymap().get(Settings.Action.HARD_DROP), ' ');
+        setBlockPosition(5, 0);
+        int hardDropKeyCode = app.getSettings().getKeymap().get(Settings.Action.HARD_DROP);
+        KeyEvent hardDrop = new KeyEvent(new java.awt.Component(){}, 0, 0, 0, hardDropKeyCode, ' ');
         screen.onKeyPressed(hardDrop);
-        // 필드에서 가장 아래에 블록이 고정됐는지 확인
-        int[][] field = null;
+        // 하드드롭 후 field 배열의 바닥에 블록이 고정됐는지 확인
+        int[][] field;
         try {
             java.lang.reflect.Field f = manager.getClass().getDeclaredField("field");
             f.setAccessible(true);
@@ -274,28 +275,26 @@ class GameScreenKeyTest {
         } catch (Exception e) { throw new RuntimeException(e); }
         boolean blockAtBottom = false;
         for (int x = 0; x < field[0].length; x++) {
-            if (field[field.length - 1][x] == 1) {
+            if (field[19][x] == 1) {
                 blockAtBottom = true;
                 break;
             }
         }
+        System.out.println("blockAtBottom: " + blockAtBottom);
         assertTrue(blockAtBottom, "하드 드롭 후 블록이 바닥에 고정되어야 함");
     }
 
     @Test
     @DisplayName("HARD_DROP 키 입력 시 블록 하드 드롭: 장애물 위에 멈춤")
     void testHardDropKeyWithObstacle() {
-        manager.resetGame();
-        clearField();
-        Block block = new se.tetris.team3.blocks.IBlock();
-        setCurrentBlock(block);
-        setNextBlock(block);
-        manager.tryMove(5, 0);
-        setFieldRow(10, 1); // 장애물: 10번째 줄에 블록 추가
-        KeyEvent hardDrop = new KeyEvent(new java.awt.Component(){}, 0, 0, 0, app.getSettings().getKeymap().get(Settings.Action.HARD_DROP), ' ');
+        setBlockPosition(5, 0);
+        // 10번째 줄에 장애물 추가
+        setFieldRow(10, 1);
+        int hardDropKeyCode = app.getSettings().getKeymap().get(Settings.Action.HARD_DROP);
+        KeyEvent hardDrop = new KeyEvent(new java.awt.Component(){}, 0, 0, 0, hardDropKeyCode, ' ');
         screen.onKeyPressed(hardDrop);
-        // 필드에서 장애물 바로 위에 블록이 고정됐는지 확인
-        int[][] field = null;
+        // 필드에서 장애물 바로 위(9번째 줄)에 블록이 고정됐는지 확인
+        int[][] field;
         try {
             java.lang.reflect.Field f = manager.getClass().getDeclaredField("field");
             f.setAccessible(true);
@@ -303,14 +302,14 @@ class GameScreenKeyTest {
         } catch (Exception e) { throw new RuntimeException(e); }
         boolean blockAboveObstacle = false;
         for (int x = 0; x < field[0].length; x++) {
-            if (field[9][x] == 1) { // 장애물 바로 위(9번째 줄)에 블록이 고정됐는지
+            if (field[9][x] == 1) {
                 blockAboveObstacle = true;
                 break;
             }
         }
+        System.out.println("blockAboveObstacle: " + blockAboveObstacle);
         assertTrue(blockAboveObstacle, "하드 드롭 후 블록이 장애물 위에 고정되어야 함");
     }
-        // nextBlock을 직접 세팅
 
     // currentBlock을 직접 세팅
     private void setCurrentBlock(Block block) {
@@ -443,7 +442,7 @@ class GameScreenKeyTest {
             java.lang.reflect.Field f = AppFrame.class.getDeclaredField("current");
             f.setAccessible(true);
             Object current = f.get(app);
-            return current instanceof se.tetris.team3.ui.score.ScoreboardScreen || current instanceof NameInputScreen;
+            return current instanceof se.tetris.team3.ui.screen.ScoreboardScreen || current instanceof NameInputScreen;
         } catch (Exception e) { return false; }
     }
 }

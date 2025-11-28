@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 import se.tetris.team3.core.GameMode;
-import se.tetris.team3.ui.GameManager;
+import se.tetris.team3.gameManager.GameManager;
 
 /**
  * T 아이템 슬로우 모드 기능 테스트

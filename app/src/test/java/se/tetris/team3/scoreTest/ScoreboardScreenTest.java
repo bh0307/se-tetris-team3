@@ -1,14 +1,17 @@
 package se.tetris.team3.scoreTest;
+import java.lang.reflect.Method;
+import java.lang.reflect.Field;
 
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.DisplayName;
 import org.mockito.Mockito;
+
 import se.tetris.team3.core.GameMode;
 import se.tetris.team3.core.Settings;
+import se.tetris.team3.gameManager.ScoreManager;
+import se.tetris.team3.gameManager.ScoreManager.ScoreEntry;
 import se.tetris.team3.ui.AppFrame;
-import se.tetris.team3.ui.score.ScoreManager;
-import se.tetris.team3.ui.score.ScoreManager.ScoreEntry;
-import se.tetris.team3.ui.score.ScoreboardScreen;
+import se.tetris.team3.ui.screen.ScoreboardScreen;
 
 import java.awt.*;
 import java.awt.event.KeyEvent;
@@ -95,7 +98,7 @@ class ScoreboardScreenTest {
     @Test
     @DisplayName("drawStringEllipsis가 긴 문자열, 짧은 문자열, null 입력에 대해 예외 없이 처리되는지 검증")
     void testDrawStringEllipsis() throws Exception {
-        var method = ScoreboardScreen.class.getDeclaredMethod("drawStringEllipsis", Graphics2D.class, String.class, int.class, int.class, int.class);
+        Method method = ScoreboardScreen.class.getDeclaredMethod("drawStringEllipsis", Graphics2D.class, String.class, int.class, int.class, int.class);
         method.setAccessible(true);
         method.invoke(screen, g2, "Short", 0, 0, 100);
         method.invoke(screen, g2, "VeryLongNameThatExceeds", 0, 0, 10);
@@ -108,7 +111,7 @@ class ScoreboardScreenTest {
         ScoreEntry entry = Mockito.mock(ScoreEntry.class);
         Mockito.when(entry.getPlayerName()).thenReturn("Tester");
         Mockito.when(entry.getScore()).thenReturn(1000);
-        var method = ScoreboardScreen.class.getDeclaredMethod("isNewlyAddedScore", ScoreEntry.class);
+        Method method = ScoreboardScreen.class.getDeclaredMethod("isNewlyAddedScore", ScoreEntry.class);
         method.setAccessible(true);
         assertTrue((Boolean)method.invoke(screen, entry));
 
@@ -167,19 +170,19 @@ class ScoreboardScreenTest {
     // MenuItem action 교체용 유틸리티
     private void setMenuItemAction(ScoreboardScreen s, int idx, Runnable action) {
         try {
-            var f = ScoreboardScreen.class.getDeclaredField("items");
+            Field f = ScoreboardScreen.class.getDeclaredField("items");
             f.setAccessible(true);
             @SuppressWarnings("unchecked")
             List<Object> items = (List<Object>) f.get(s);
             Object menuItem = items.get(idx);
-            var af = menuItem.getClass().getDeclaredField("action");
+            Field af = menuItem.getClass().getDeclaredField("action");
             af.setAccessible(true);
             af.set(menuItem, action);
         } catch (Exception e) { throw new RuntimeException(e); }
     }
     private void setIdx(ScoreboardScreen s, int idx) {
         try {
-            var f = ScoreboardScreen.class.getDeclaredField("idx");
+            Field f = ScoreboardScreen.class.getDeclaredField("idx");
             f.setAccessible(true);
             f.setInt(s, idx);
         } catch (Exception e) { }
@@ -188,7 +191,7 @@ class ScoreboardScreenTest {
     @Test
     @DisplayName("renderMenu가 선택 인덱스에 따라 메뉴 하이라이트를 정상적으로 처리하는지 검증")
     void testRenderMenuIndex() throws Exception {
-        var method = ScoreboardScreen.class.getDeclaredMethod("renderMenu", Graphics2D.class, int.class, int.class);
+        Method method = ScoreboardScreen.class.getDeclaredMethod("renderMenu", Graphics2D.class, int.class, int.class);
         method.setAccessible(true);
         method.invoke(screen, g2, 800, 600);
     }
@@ -214,14 +217,14 @@ class ScoreboardScreenTest {
     // private 필드 접근용 메서드
     private int getIdx(ScoreboardScreen s) {
         try {
-            var f = ScoreboardScreen.class.getDeclaredField("idx");
+            Field f = ScoreboardScreen.class.getDeclaredField("idx");
             f.setAccessible(true);
             return f.getInt(s);
         } catch (Exception e) { return -1; }
     }
     private GameMode getCurrentMode(ScoreboardScreen s) {
         try {
-            var f = ScoreboardScreen.class.getDeclaredField("currentMode");
+            Field f = ScoreboardScreen.class.getDeclaredField("currentMode");
             f.setAccessible(true);
             return (GameMode) f.get(s);
         } catch (Exception e) { return null; }

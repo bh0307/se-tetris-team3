@@ -4,7 +4,7 @@ import se.tetris.team3.core.GameMode;
 import se.tetris.team3.core.Settings;
 import se.tetris.team3.core.Settings.Action;
 import se.tetris.team3.core.Settings.SizePreset;
-import se.tetris.team3.ui.score.ScoreManager;
+import se.tetris.team3.gameManager.ScoreManager;
 
 import java.io.*;
 import java.nio.file.*;
@@ -42,7 +42,7 @@ public class SettingsStore {
             p.setProperty("gameMode", s.getGameMode().name());
 
             // 키맵 저장
-            for (var e : s.getKeymap().entrySet()) {
+            for (Map.Entry<Settings.Action, Integer> e : s.getKeymap().entrySet()) {
                 p.setProperty("key." + e.getKey().name(), Integer.toString(e.getValue()));
             }
 
@@ -117,7 +117,7 @@ public class SettingsStore {
 
     /** 최근 접속한 P2P IP 를 맨 앞에 추가하고 최대 5개까지만 유지 */
     public static void addRecentP2PIP(String ip) {
-        if (ip == null || ip.isBlank()) return;
+        if (ip == null || ip.trim().isEmpty()) return;
         ip = ip.trim();
 
         Properties p = new Properties();

@@ -1,4 +1,4 @@
-package se.tetris.team3.ui;
+package se.tetris.team3.gameManager;
 
 import se.tetris.team3.core.GameMode;
 import se.tetris.team3.core.Settings;

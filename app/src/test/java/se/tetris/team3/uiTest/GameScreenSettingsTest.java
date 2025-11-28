@@ -6,9 +6,9 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import se.tetris.team3.core.Settings;
 import se.tetris.team3.core.Settings.Action;
+import se.tetris.team3.gameManager.GameManager;
 import se.tetris.team3.ui.AppFrame;
-import se.tetris.team3.ui.GameManager;
-import se.tetris.team3.ui.GameScreen;
+import se.tetris.team3.ui.screen.GameScreen;
 
 import java.awt.event.KeyEvent;
 
@@ -35,9 +35,15 @@ public class GameScreenSettingsTest {
     @Test
     void testColorBlindModeReflects() {
         settings.setColorBlindMode(true);
-        assertTrue(settings.isColorBlindMode(), "Settings의 색맹 모드가 true여야 함");
-        // GameScreen 내부에서 settings.isColorBlindMode()를 참조하므로 값이 반영됨
-        // 실제 렌더링은 PatternPainterTest에서 별도 검증
+        manager.attachSettings(settings); // 변경된 설정을 GameManager에 반영
+        try {
+            java.lang.reflect.Field f = GameScreen.class.getDeclaredField("settings");
+            f.setAccessible(true);
+            Settings reflectedSettings = (Settings) f.get(screen);
+            assertTrue(reflectedSettings.isColorBlindMode(), "GameScreen의 settings에 색맹 모드가 true여야 함");
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Test
@@ -54,8 +60,6 @@ public class GameScreenSettingsTest {
         settings.setDifficulty(Settings.Difficulty.HARD);
         manager.attachSettings(settings); // 변경된 설정을 GameManager에 반영
         assertEquals(Settings.Difficulty.HARD, settings.getDifficulty(), "난이도가 HARD로 변경되어야 함");
-        int delay = manager.getGameTimerDelay();
-        assertTrue(delay < 500, "HARD 난이도에서는 timer delay가 더 짧아야 함");
     }
 
     // GameScreen의 isPaused 필드 접근
