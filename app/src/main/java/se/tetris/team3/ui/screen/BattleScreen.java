@@ -1,7 +1,4 @@
-package se.tetris.team3.ui.screen;
-import se.tetris.team3.ui.AppFrame;
-import se.tetris.team3.ui.render.GhostBlockRenderer;
-import se.tetris.team3.blocks.Block;
+package se.tetris.team3.ui;
 
 import java.awt.Color;
 import java.awt.Font;
@@ -11,10 +8,10 @@ import java.awt.event.KeyEvent;
 
 import javax.swing.Timer;
 
+import se.tetris.team3.ai.AIPlayer;
+import se.tetris.team3.audio.AudioManager;
 import se.tetris.team3.core.GameMode;
 import se.tetris.team3.core.Settings;
-import se.tetris.team3.gameManager.BattleGameManager;
-import se.tetris.team3.gameManager.GameManager;
 
 /**
  * 2인 대전 모드 화면
@@ -31,6 +28,8 @@ public class BattleScreen implements Screen {
 
     // 화면 레이아웃 관련
     private int blockSize;
+    private int blockSizeW; // 블록 가로 길이
+    private int blockSizeH; // 블록 세로 길이
     private int boardWidth;
     private int boardHeight;
     private int centerGap;
@@ -39,11 +38,16 @@ public class BattleScreen implements Screen {
     // 타이머 (게임 루프 + 낙하)
     private Timer gameTimer;
     private Timer dropTimer;
+    private Timer aiTimer; // AI 플레이어용 타이머
 
     private long player1LastDrop;
     private long player2LastDrop;
 
     private boolean paused = false;
+    
+    // AI 플레이어 관련
+    private AIPlayer aiPlayer;
+    private boolean isPlayer2AI = false; // Player2가 AI인지 여부
 
     /**
      * BattleScreen 생성자
@@ -53,16 +57,41 @@ public class BattleScreen implements Screen {
      * @param timeLimitSeconds 시간제한 모드일 경우 제한 시간(초), 아니면 0
      */
     public BattleScreen(AppFrame frame, GameMode mode, Settings settings, int timeLimitSeconds) {
+        this(frame, mode, settings, timeLimitSeconds, false);
+    }
+    
+    /**
+     * BattleScreen 생성자 (AI 옵션 포함)
+     * @param frame        부모 프레임
+     * @param mode         대전 모드 (BATTLE_NORMAL, BATTLE_ITEM, BATTLE_TIME)
+     * @param settings     게임 설정
+     * @param timeLimitSeconds 시간제한 모드일 경우 제한 시간(초), 아니면 0
+     * @param isPlayer2AI  Player2를 AI로 설정할지 여부
+     */
+    public BattleScreen(AppFrame frame, GameMode mode, Settings settings, int timeLimitSeconds, boolean isPlayer2AI) {
         this.frame = frame;
         this.settings = settings;
         this.battleManager = new BattleGameManager(mode, settings, timeLimitSeconds);
+        this.isPlayer2AI = isPlayer2AI;
 
         player1LastDrop = System.currentTimeMillis();
         player2LastDrop = System.currentTimeMillis();
+        
+        // AI 플레이어 초기화
+        if (isPlayer2AI) {
+            aiPlayer = new AIPlayer(battleManager.getPlayer2Manager());
+        }
     }
 
     @Override
     public void onShow() {
+        // 대전 BGM 재생
+        try {
+            AudioManager.getInstance().playBGM("/audio/battle_theme.wav");
+        } catch (Exception e) {
+            // 오디오 파일이 없어도 게임은 계속 진행
+        }
+        
         // 게임 로직 업데이트(60fps 정도)
         gameTimer = new Timer(16, evt -> {
             if (!paused) {
@@ -93,12 +122,58 @@ public class BattleScreen implements Screen {
             }
         });
         dropTimer.start();
+        
+        // AI 플레이어 타이머 (0.5~1초 간격으로 랜덤하게 호출)
+        if (isPlayer2AI && aiPlayer != null) {
+            aiTimer = new Timer(300 + (int)(Math.random() * 400), evt -> {
+                if (!paused && !battleManager.isGameOver()) {
+                    executeAIAction();
+                    // 다음 호출 간격도 랜덤하게 설정 (0.3~0.7초)
+                    aiTimer.setDelay(300 + (int)(Math.random() * 400));
+                }
+            });
+            aiTimer.start();
+        }
     }
 
     @Override
     public void onHide() {
         if (gameTimer != null) gameTimer.stop();
         if (dropTimer != null) dropTimer.stop();
+        if (aiTimer != null) aiTimer.stop();
+    }
+    
+    /**
+     * AI 플레이어의 다음 액션 실행
+     */
+    private void executeAIAction() {
+        if (aiPlayer == null) return;
+        
+        AIPlayer.AIAction action = aiPlayer.getNextAction();
+        GameManager p2 = battleManager.getPlayer2Manager();
+        
+        switch (action) {
+            case MOVE_LEFT:
+                p2.tryMove(p2.getBlockX() - 1, p2.getBlockY());
+                break;
+            case MOVE_RIGHT:
+                p2.tryMove(p2.getBlockX() + 1, p2.getBlockY());
+                break;
+            case ROTATE:
+                p2.rotateBlock();
+                break;
+            case SOFT_DROP:
+                p2.stepDownOrFix();
+                player2LastDrop = System.currentTimeMillis();
+                break;
+            case HARD_DROP:
+                p2.hardDrop();
+                player2LastDrop = System.currentTimeMillis();
+                break;
+            case NONE:
+                // 아무것도 하지 않음
+                break;
+        }
     }
 
     @Override
@@ -128,42 +203,46 @@ public class BattleScreen implements Screen {
         GameManager p2 = battleManager.getPlayer2Manager();
 
         switch (key) {
-            // Player1: WASD
-            case KeyEvent.VK_A:
+            // Player1: 방향키
+            case KeyEvent.VK_LEFT:
                 p1.tryMove(p1.getBlockX() - 1, p1.getBlockY());
                 break;
-            case KeyEvent.VK_D:
+            case KeyEvent.VK_RIGHT:
                 p1.tryMove(p1.getBlockX() + 1, p1.getBlockY());
                 break;
-            case KeyEvent.VK_S:
+            case KeyEvent.VK_DOWN:
                 p1.stepDownOrFix();
                 player1LastDrop = System.currentTimeMillis();
                 break;
-            case KeyEvent.VK_W:
-                p1.rotateBlock();
-                break;
-
-            // Player2: 화살표
-            case KeyEvent.VK_LEFT:
-                p2.tryMove(p2.getBlockX() - 1, p2.getBlockY());
-                break;
-            case KeyEvent.VK_RIGHT:
-                p2.tryMove(p2.getBlockX() + 1, p2.getBlockY());
-                break;
-            case KeyEvent.VK_DOWN:
-                p2.stepDownOrFix();
-                player2LastDrop = System.currentTimeMillis();
-                break;
             case KeyEvent.VK_UP:
-                p2.rotateBlock();
-                break;
-            case KeyEvent.VK_ENTER:
-                p2.hardDrop();
-                player2LastDrop = System.currentTimeMillis();
+                p1.rotateBlock();
                 break;
             case KeyEvent.VK_SPACE:
                 p1.hardDrop();
                 player1LastDrop = System.currentTimeMillis();
+                break;
+
+            // Player2: WASD (AI 모드가 아닐 때만)
+            case KeyEvent.VK_A:
+                if (!isPlayer2AI) p2.tryMove(p2.getBlockX() - 1, p2.getBlockY());
+                break;
+            case KeyEvent.VK_D:
+                if (!isPlayer2AI) p2.tryMove(p2.getBlockX() + 1, p2.getBlockY());
+                break;
+            case KeyEvent.VK_S:
+                if (!isPlayer2AI) {
+                    p2.stepDownOrFix();
+                    player2LastDrop = System.currentTimeMillis();
+                }
+                break;
+            case KeyEvent.VK_W:
+                if (!isPlayer2AI) p2.rotateBlock();
+                break;
+            case KeyEvent.VK_ENTER:
+                if (!isPlayer2AI) {
+                    p2.hardDrop();
+                    player2LastDrop = System.currentTimeMillis();
+                }
                 break;
 
             // ESC: 메뉴로
@@ -198,8 +277,9 @@ public class BattleScreen implements Screen {
         // 왼쪽 플레이어
         drawPlayerBoard(g2, leftBoardX, boardY, battleManager.getPlayer1Manager(), "Player 1", 1);
 
-        // 오른쪽 플레이어
-        drawPlayerBoard(g2, rightBoardX, boardY, battleManager.getPlayer2Manager(), "Player 2", 2);
+        // 오른쪽 플레이어 (AI 여부에 따라 이름 변경)
+        String player2Name = isPlayer2AI ? "Computer" : "Player 2";
+        drawPlayerBoard(g2, rightBoardX, boardY, battleManager.getPlayer2Manager(), player2Name, 2);
 
         // 중앙 시간/승자/일시정지 표시
         drawCenterInfo(g2, width, height);
@@ -222,9 +302,11 @@ public class BattleScreen implements Screen {
 
         // 화면에 안 튀어나가도록 상한은 maxFitSize, 너무 작진 않게 하한은 12
         blockSize = Math.max(12, Math.min(preferred, maxFitSize));
+        blockSizeW = (int)(blockSize * 1.2); // 가로 길이 20% 증가
+        blockSizeH = (int)(blockSize * 1.7); // 세로 길이 70% 증가
 
-        boardWidth  = 10 * blockSize;
-        boardHeight = 20 * blockSize;
+        boardWidth  = 10 * blockSizeW;
+        boardHeight = 20 * blockSizeH;
 
         centerGap = Math.max(35, blockSize * 2);
         topMargin = Math.max(75, (screenHeight - boardHeight - 100) / 2);
@@ -262,16 +344,18 @@ public class BattleScreen implements Screen {
         // 고정 블럭
         for (int row = 0; row < 20; row++) {
             for (int col = 0; col < 10; col++) {
-                int cellX = x + col * blockSize;
-                int cellY = y + row * blockSize;
+                int cellX = x + col * blockSizeW;
+                int cellY = y + row * blockSizeH;
+
                 if (manager.isRowFlashing(row)) {
+                    // 플래시 효과
                     g2.setColor(Color.WHITE);
-                    g2.fillRect(cellX, cellY, blockSize - 1, blockSize - 1);
+                    g2.fillRect(cellX, cellY, blockSizeW - 1, blockSizeH - 1);
                 } else if (manager.getFieldValue(row, col) == 1) {
-                    se.tetris.team3.ui.render.PatternPainter.drawCell(
-                        g2, cellX, cellY, blockSize - 1,
-                        Color.DARK_GRAY, null, settings != null && settings.isColorBlindMode()
-                    );
+                    g2.setColor(Color.DARK_GRAY);
+                    g2.fillRect(cellX, cellY, blockSizeW - 1, blockSizeH - 1);
+
+                    // 고정 블럭에 아이템이 있으면 글자 표시
                     char itemType = manager.getItemType(row, col);
                     if (itemType != 0) {
                         GameScreen.drawCenteredChar(g2, cellX, cellY, blockSize, itemType);
@@ -282,16 +366,51 @@ public class BattleScreen implements Screen {
 
         // 현재 블럭 + 고스트 블록(하드 드롭 위치 미리보기)
         if (!manager.isGameOver() && manager.getCurrentBlock() != null) {
-            Block cur = manager.getCurrentBlock();
+            var cur = manager.getCurrentBlock();
             int[][] shape = cur.getShape();
             Color base = cur.getColor();
             int bx = manager.getBlockX();
             int by = manager.getBlockY();
 
-            int ghostY = GhostBlockRenderer.calculateGhostY(cur, bx, by, 20, 10, (row, col) -> manager.getFieldValue(row, col));
-            Color ghostColor = new Color(base.getRed(), base.getGreen(), base.getBlue(), 80);
-            GhostBlockRenderer.renderGhostBlock(g2, cur, bx, ghostY, 20, 10, blockSize, x, y, ghostColor, settings);
+            // 1. 하드 드롭 위치 계산
+            int ghostY = by;
+            while (true) {
+                boolean canMove = true;
+                for (int r = 0; r < shape.length; r++) {
+                    for (int c = 0; c < shape[r].length; c++) {
+                        if (shape[r][c] != 0) {
+                            int testY = ghostY + r + 1;
+                            int testX = bx + c;
+                            if (testY >= 20 || manager.getFieldValue(testY, testX) != 0) {
+                                canMove = false;
+                                break;
+                            }
+                        }
+                    }
+                    if (!canMove) break;
+                }
+                if (!canMove) break;
+                ghostY++;
+            }
 
+            // 2. 고스트 블록(연한 색) 먼저 그림
+            Color ghostColor = new Color(base.getRed(), base.getGreen(), base.getBlue(), 80); // 투명도 적용
+            for (int r = 0; r < shape.length; r++) {
+                for (int c = 0; c < shape[r].length; c++) {
+                    if (shape[r][c] != 0) {
+                        int gx = bx + c;
+                        int gy = ghostY + r;
+                        if (gx >= 0 && gx < 10 && gy >= 0 && gy < 20) {
+                            int cellX = x + gx * blockSizeW;
+                            int cellY = y + gy * blockSizeH;
+                            g2.setColor(ghostColor);
+                            g2.fillRect(cellX, cellY, blockSizeW - 1, blockSizeH - 1);
+                        }
+                    }
+                }
+            }
+
+            // 3. 실제 블록 그림
             Integer ir = null, ic = null;
             if (cur.getItemType() != 0) {
                 try {
@@ -305,13 +424,12 @@ public class BattleScreen implements Screen {
                         int gx = bx + c;
                         int gy = by + r;
                         if (gx >= 0 && gx < 10 && gy >= 0 && gy < 20) {
-                            int cellX = x + gx * blockSize;
-                            int cellY = y + gy * blockSize;
-                            se.tetris.team3.ui.render.PatternPainter.drawCell(
-                                g2, cellX, cellY, blockSize - 1,
-                                base, cur, settings != null && settings.isColorBlindMode()
-                            );
-                            if (cur.getItemType() != 0 && ir != null && ic != null && r == ir && c == ic) {
+                            int cellX = x + gx * blockSizeW;
+                            int cellY = y + gy * blockSizeH;
+                            g2.setColor(base);
+                            g2.fillRect(cellX, cellY, blockSizeW - 1, blockSizeH - 1);
+                            if (cur.getItemType() != 0 && ir != null && ic != null
+                                    && r == ir && c == ic) {
                                 GameScreen.drawCenteredChar(g2, cellX, cellY, blockSize, cur.getItemType());
                             }
                         }
@@ -337,25 +455,21 @@ public class BattleScreen implements Screen {
         int lineH = fontSize + 3;
 
         if (playerNum == 1) {
-            String c1 = "A/D: Move Left/Right";
-            String c2 = "W: Rotate";
-            String c3 = "S: Soft Drop";
-            String c4 = "SPACE: Hard Drop";
-            int yBase = y + boardHeight + 15;
-            g2.drawString(c1, x + (boardWidth - g2.getFontMetrics().stringWidth(c1)) / 2, yBase);
-            g2.drawString(c2, x + (boardWidth - g2.getFontMetrics().stringWidth(c2)) / 2, yBase + lineH);
-            g2.drawString(c3, x + (boardWidth - g2.getFontMetrics().stringWidth(c3)) / 2, yBase + lineH * 2);
-            g2.drawString(c4, x + (boardWidth - g2.getFontMetrics().stringWidth(c4)) / 2, yBase + lineH * 3);
-        } else {
-            String c1 = "←/→: Move Left/Right";
+            String c1 = "←/→: Move";
             String c2 = "↑: Rotate";
-            String c3 = "↓: Soft Drop";
-            String c4 = "ENTER: Hard Drop";
+            String c3 = "↓: Drop";
             int yBase = y + boardHeight + 15;
             g2.drawString(c1, x + (boardWidth - g2.getFontMetrics().stringWidth(c1)) / 2, yBase);
             g2.drawString(c2, x + (boardWidth - g2.getFontMetrics().stringWidth(c2)) / 2, yBase + lineH);
             g2.drawString(c3, x + (boardWidth - g2.getFontMetrics().stringWidth(c3)) / 2, yBase + lineH * 2);
-            g2.drawString(c4, x + (boardWidth - g2.getFontMetrics().stringWidth(c4)) / 2, yBase + lineH * 3);
+        } else {
+            String c1 = "A/D: Move";
+            String c2 = "W: Rotate";
+            String c3 = "S: Drop";
+            int yBase = y + boardHeight + 15;
+            g2.drawString(c1, x + (boardWidth - g2.getFontMetrics().stringWidth(c1)) / 2, yBase);
+            g2.drawString(c2, x + (boardWidth - g2.getFontMetrics().stringWidth(c2)) / 2, yBase + lineH);
+            g2.drawString(c3, x + (boardWidth - g2.getFontMetrics().stringWidth(c3)) / 2, yBase + lineH * 2);
         }
     }
 
@@ -392,10 +506,8 @@ public class BattleScreen implements Screen {
                 if (shape[r][c] != 0) {
                     int cellX = nextX + offsetX + c * nextBlockSize;
                     int cellY = nextY + offsetY + r * nextBlockSize;
-                    se.tetris.team3.ui.render.PatternPainter.drawCell(
-                        g2, cellX, cellY, nextBlockSize - 1,
-                        color, manager.getNextBlock(), settings != null && settings.isColorBlindMode()
-                    );
+                    g2.setColor(color);
+                    g2.fillRect(cellX, cellY, nextBlockSize - 1, nextBlockSize - 1);
                 }
             }
         }
@@ -519,8 +631,9 @@ public class BattleScreen implements Screen {
                 resultText = "Player 1 WINS!";
                 g2.setColor(Color.CYAN);
             } else {
-                resultText = "Player 2 WINS!";
-                g2.setColor(Color.GREEN);
+                // AI 모드일 때는 "AI WINS!" 표시
+                resultText = isPlayer2AI ? "AI WINS!" : "Player 2 WINS!";
+                g2.setColor(Color.RED);
             }
 
             int rwid = g2.getFontMetrics().stringWidth(resultText);

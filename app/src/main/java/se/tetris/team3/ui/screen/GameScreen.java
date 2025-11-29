@@ -1,7 +1,4 @@
-package se.tetris.team3.ui.screen;
-import se.tetris.team3.ui.AppFrame;
-import se.tetris.team3.ui.render.GhostBlockRenderer;
-import se.tetris.team3.ui.render.PatternPainter;
+package se.tetris.team3.ui;
 
 import java.awt.*;
 import java.awt.event.KeyEvent;
@@ -9,12 +6,10 @@ import javax.swing.Timer;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
-import java.util.Map;
-import se.tetris.team3.core.GameMode;
+import se.tetris.team3.audio.AudioManager;
 import se.tetris.team3.blocks.Block;
 import se.tetris.team3.core.Settings;
-import se.tetris.team3.gameManager.GameManager;
-import se.tetris.team3.gameManager.ScoreManager;
+import se.tetris.team3.ui.score.ScoreManager;
 
 // 키 입력/타이머/렌더링, 일시정지, 게임오버 처리
 public class GameScreen implements Screen {
@@ -40,6 +35,13 @@ public class GameScreen implements Screen {
     }
 
     @Override public void onShow() {
+    // 게임 BGM 재생
+    try {
+        AudioManager.getInstance().playBGM("/audio/game_theme.wav");
+    } catch (Exception e) {
+        // 오디오 파일이 없어도 게임은 계속 진행
+    }
+    
     // 게임 로직 타이머
     timer = new Timer(1000, new ActionListener() {
         @Override public void actionPerformed(ActionEvent e) {
@@ -140,6 +142,7 @@ public class GameScreen implements Screen {
     @Override
     public void render(Graphics2D g2) {
         int blockSize = settings.resolveBlockSize();
+        int blockSizeH = (int)(blockSize * 1.15); // 세로 길이 15% 증가
         int padding = 18;
 
         g2.setColor(Color.BLACK);
@@ -168,7 +171,7 @@ public class GameScreen implements Screen {
 
         g2.setColor(Color.WHITE);
         g2.setStroke(new BasicStroke(3));
-        g2.drawRect(padding, padding, blockSize * 10, blockSize * 20);
+        g2.drawRect(padding, padding, blockSize * 10, blockSizeH * 20);
         g2.setStroke(new BasicStroke(1));
 
         alignSpawnIfNewBlock();
@@ -178,16 +181,18 @@ public class GameScreen implements Screen {
             for (int c = 0; c < REGION_COLS; c++) {
                 if (manager.getFieldValue(r, c) != 0) {
                     int x = padding + c * blockSize;
-                    int y = padding + r * blockSize;
+                    int y = padding + r * blockSizeH;
                     
                     // 플래시 효과: 해당 줄이 깨지기 직전이면 하얗게 렌더링
                     if (manager.isRowFlashing(r)) {
                         g2.setColor(Color.WHITE);
-                        g2.fillRect(x, y, blockSize, blockSize);
+                        g2.fillRect(x, y, blockSize, blockSizeH);
                         g2.setColor(Color.LIGHT_GRAY);
-                        g2.drawRect(x, y, blockSize - 1, blockSize - 1);
+                        g2.drawRect(x, y, blockSize - 1, blockSizeH - 1);
                     } else {
-                        PatternPainter.drawCell(g2, x, y, blockSize, Color.GRAY, null, settings.isColorBlindMode());
+                        Color blockColor = manager.getBlockColor(r, c);
+                        if (blockColor == null) blockColor = Color.GRAY;
+                        PatternPainter.drawCellRect(g2, x, y, blockSize, blockSizeH, blockColor, null, settings.isColorBlindMode());
                         
                         // 고정된 블록에 아이템이 있으면 글자 표시
                         if (manager.hasItem(r, c)) {
@@ -207,10 +212,41 @@ public class GameScreen implements Screen {
                 Color base = cur.getColor();
                 int bx = manager.getBlockX(), by = manager.getBlockY();
 
-                // 1. 하드 드롭 위치 계산 및 고스트 블록 렌더링 (공통 클래스 사용)
-                int ghostY = GhostBlockRenderer.calculateGhostY(cur, bx, by, REGION_ROWS, REGION_COLS, (row, col) -> manager.getFieldValue(row, col));
+                // 1. 하드 드롭 위치 계산
+                int ghostY = by;
+                while (true) {
+                    boolean canMove = true;
+                    for (int r = 0; r < shape.length; r++) {
+                        for (int c = 0; c < shape[r].length; c++) {
+                            if (shape[r][c] != 0) {
+                                int testY = ghostY + r + 1;
+                                int testX = bx + c;
+                                if (testY >= REGION_ROWS || manager.getFieldValue(testY, testX) != 0) {
+                                    canMove = false;
+                                    break;
+                                }
+                            }
+                        }
+                        if (!canMove) break;
+                    }
+                    if (!canMove) break;
+                    ghostY++;
+                }
+
+                // 2. 고스트 블록(연한 색) 먼저 그림
                 Color ghostColor = new Color(base.getRed(), base.getGreen(), base.getBlue(), 80); // 투명도 적용
-                GhostBlockRenderer.renderGhostBlock(g2, cur, bx, ghostY, REGION_ROWS, REGION_COLS, blockSize, padding, padding, ghostColor, settings);
+                for (int r = 0; r < shape.length; r++) {
+                    for (int c = 0; c < shape[r].length; c++) {
+                        if (shape[r][c] != 0) {
+                            int gx = bx + c, gy = ghostY + r;
+                            if (gx>=0 && gx<REGION_COLS && gy>=0 && gy<REGION_ROWS) {
+                                int x = padding + gx * blockSize;
+                                int y = padding + gy * blockSizeH;
+                                PatternPainter.drawCellRect(g2, x, y, blockSize, blockSizeH, ghostColor, cur, settings.isColorBlindMode());
+                            }
+                        }
+                    }
+                }
 
                 // 3. 실제 블록 그림
                 Integer ir = null, ic = null;
@@ -226,8 +262,8 @@ public class GameScreen implements Screen {
                             int gx = bx + c, gy = by + r;
                             if (gx>=0 && gx<REGION_COLS && gy>=0 && gy<REGION_ROWS) {
                                 int x = padding + gx * blockSize;
-                                int y = padding + gy * blockSize;
-                                PatternPainter.drawCell(g2, x, y, blockSize, base, cur, settings.isColorBlindMode());
+                                int y = padding + gy * blockSizeH;
+                                PatternPainter.drawCellRect(g2, x, y, blockSize, blockSizeH, base, cur, settings.isColorBlindMode());
                                 if (cur.getItemType() != 0 && ir != null && ic != null && r == ir && c == ic) {
                                     drawCenteredChar(g2, x, y, blockSize, cur.getItemType());
                                 }
@@ -272,20 +308,20 @@ public class GameScreen implements Screen {
 
         if (manager.isGameOver()) {
             ScoreManager sm = new ScoreManager();
-            GameMode mode = manager.getMode();
-            int score = manager.getScore();
+            var mode = manager.getMode();
+            var score = manager.getScore();
 
             // 최고 점수이면 이름 입력 화면으로
             if (sm.isHighScore(mode, score)) {
                 app.showScreen(new NameInputScreen(app, mode, score));
             } else {
                 // 최고 점수가 아니면 바로 스코어보드로
-                app.showScreen(new se.tetris.team3.ui.screen.ScoreboardScreen(app, score, sm));
+                app.showScreen(new se.tetris.team3.ui.score.ScoreboardScreen(app, score, sm));
             }
             return;
         }
 
-        final Map<Settings.Action, Integer> km = settings.getKeymap();
+        final var km = settings.getKeymap();
 
         if (code == km.get(se.tetris.team3.core.Settings.Action.PAUSE)) {
             isPaused = !isPaused;

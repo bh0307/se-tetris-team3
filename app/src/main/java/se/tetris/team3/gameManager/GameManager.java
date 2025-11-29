@@ -32,6 +32,7 @@ public class GameManager {
 
     private int[][] field = new int[FIELD_HEIGHT][FIELD_WIDTH];
     private char[][] itemField = new char[FIELD_HEIGHT][FIELD_WIDTH]; // 아이템 타입 저장
+    private Color[][] colorField = new Color[FIELD_HEIGHT][FIELD_WIDTH]; // 블록 색상 저장
     private Block currentBlock;
     private Block nextBlock;
     private int blockX, blockY;
@@ -363,6 +364,7 @@ public class GameManager {
                     int fieldX = blockX + j;
                     
                     field[fieldY][fieldX] = 1;
+                    colorField[fieldY][fieldX] = currentBlock.getColor(); // 색상 저장
                     
                     // 아이템 정보 저장
                     if (itemType != 0 && ir != null && ic != null && i == ir && j == ic) {
@@ -790,6 +792,12 @@ public class GameManager {
         return getItemType(row, col) != 0;
     }
     
+    // 색상 정보 접근 메서드
+    public Color getBlockColor(int row, int col) {
+        if (row < 0 || row >= FIELD_HEIGHT || col < 0 || col >= FIELD_WIDTH) return null;
+        return colorField[row][col];
+    }
+    
     // 라인 플래시 효과 확인
     public boolean isRowFlashing(int row) {
         return flashingRows.contains(row);
@@ -803,13 +811,13 @@ public void renderHUD(Graphics2D g2, int padding, int blockSize, int totalWidth)
     int hudX = padding + fieldW + 16;      // HUD 시작 X 좌표
     int hudWidth = Math.max(120, totalWidth - hudX - padding); // HUD 영역 너비
     
-    // 폰트 크기를 화면 크기에 맞춰 동적 조절 (조금 더 작게)
-    // 기본: blockSize / 3, 최소 10, 최대 18
-    int baseFontSize = Math.max(10, Math.min(18, Math.max(8, blockSize / 3)));
+    // 폰트 크기를 화면 크기에 맞춰 동적 조절 (더 크게)
+    // 기본: blockSize / 2, 최소 16, 최대 28
+    int baseFontSize = Math.max(16, Math.min(28, Math.max(14, blockSize / 2)));
     g2.setFont(new Font("맑은 고딕", Font.BOLD, baseFontSize));
 
-    // 행간도 폰트 크기에 맞춰 조절 (기본의 1.4배)
-    int lineSpacing = (int)(baseFontSize * 1.4);
+    // 행간도 폰트 크기에 맞춰 조절 (기본의 1.5배)
+    int lineSpacing = (int)(baseFontSize * 1.5);
     int scoreY = padding + lineSpacing;
 
     // 점수 표시 (말줄임 처리)
@@ -844,7 +852,7 @@ public void renderHUD(Graphics2D g2, int padding, int blockSize, int totalWidth)
         final boolean cb = (settings != null && settings.isColorBlindMode());
 
         // 다음 블록을 그릴 가로 영역을 hudWidth로 제한
-        int cell = Math.max(8, Math.min(blockSize / 2, (hudWidth - 8) / 4)); // 최대 4열 보이도록 조정
+        int cell = Math.max(14, Math.min(blockSize, (hudWidth - 8) / 4)); // 최대 4열 보이도록 조정, 크기 증가
         Integer ir = null, ic = null;
 
         // 다음 블록이 줄삭제 아이템(L)인 경우 위치 조회

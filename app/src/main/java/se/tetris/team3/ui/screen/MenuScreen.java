@@ -1,16 +1,23 @@
-package se.tetris.team3.ui.screen;
+package se.tetris.team3.ui;
 
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
+
 import javax.swing.Timer;
 
+import se.tetris.team3.audio.AudioManager;
+import se.tetris.team3.blocks.Block;
 import se.tetris.team3.core.GameMode;
-import se.tetris.team3.gameManager.GameManager;
-import se.tetris.team3.gameManager.MenuItem;
-import se.tetris.team3.gameManager.ScoreManager;
-import se.tetris.team3.ui.AppFrame;
+import se.tetris.team3.core.Settings;
+import se.tetris.team3.ui.score.ScoreManager;
+import se.tetris.team3.ui.score.ScoreboardScreen;
 
 // 메뉴 항목: 클래식 시작, 아이템 모드 시작, 설정, 스코어보드, 종료
 public class MenuScreen implements Screen {
@@ -21,6 +28,28 @@ public class MenuScreen implements Screen {
     private boolean showHintHighlight = false; // 힌트 강조 표시 여부
     private long hintHighlightTime = 0; // 힌트 강조 시작 시간
     private Timer repaintTimer; // 화면 갱신 타이머
+    private Timer animationTimer; // 배경 애니메이션 타이머
+    private List<FallingBlock> fallingBlocks = new ArrayList<>();
+    private Random random = new Random();
+    private int menuStartY = 280; // 메뉴 시작 Y 좌표
+    private int menuItemHeight = 40; // 메뉴 항목 높이
+
+    // 배경 떨어지는 블록 클래스
+    private static class FallingBlock {
+        Block block;
+        int x;
+        float y;
+        float speed;
+        int rotation;
+        
+        FallingBlock(Block block, int x, float y, float speed, int rotation) {
+            this.block = block;
+            this.x = x;
+            this.y = y;
+            this.speed = speed;
+            this.rotation = rotation;
+        }
+    }
 
     public MenuScreen(AppFrame app) {
         this.app = app;
@@ -32,6 +61,13 @@ public class MenuScreen implements Screen {
         items.add(new MenuItem("아이템 모드 시작", () -> {
             app.getSettings().setGameMode(GameMode.ITEM);
             app.showScreen(new GameScreen(app, new GameManager(GameMode.ITEM)));
+        }));
+        
+        items.add(new MenuItem("AI 모드", () -> {
+            // AI와 1:1 대전 (일반 대전 모드)
+            Settings settings = app.getSettings();
+            BattleScreen aiScreen = new BattleScreen(app, GameMode.BATTLE_NORMAL, settings, 0, true);
+            app.showScreen(aiScreen);
         }));
 
         items.add(new MenuItem("대전 모드", () -> app.showScreen(new BattleModeSelectScreen(app, app.getSettings()))));
@@ -52,24 +88,49 @@ public class MenuScreen implements Screen {
 
         int w = app.getWidth();
 
-        // 배경
-        g2.setColor(Color.BLACK);
-        g2.fillRect(0, 0, app.getWidth(), app.getHeight());
+        // 배경 그라디언트
+        for (int i = 0; i < app.getHeight(); i++) {
+            float ratio = (float)i / app.getHeight();
+            int r = (int)(20 + ratio * 10);
+            int g = (int)(20 + ratio * 10);
+            int b = (int)(40 + ratio * 20);
+            g2.setColor(new Color(r, g, b));
+            g2.drawLine(0, i, app.getWidth(), i);
+        }
 
-        // 타이틀
-        g2.setColor(Color.WHITE);
-        g2.setFont(new Font("SansSerif", Font.BOLD, 36));
-        String title = "TETRIS";
-        g2.drawString(title, (w - g2.getFontMetrics().stringWidth(title)) / 2, 140);
+        // 떨어지는 배경 블록
+        int blockSize = 25;
+        for (FallingBlock fb : fallingBlocks) {
+            int[][] shape = fb.block.getShape();
+            Color color = new Color(
+                fb.block.getColor().getRed(),
+                fb.block.getColor().getGreen(),
+                fb.block.getColor().getBlue(),
+                50
+            );
+            g2.setColor(color);
+            for (int r = 0; r < shape.length; r++) {
+                for (int c = 0; c < shape[r].length; c++) {
+                    if (shape[r][c] != 0) {
+                        int px = fb.x + c * blockSize;
+                        int py = (int)fb.y + r * blockSize;
+                        g2.fillRect(px, py, blockSize - 1, blockSize - 1);
+                    }
+                }
+            }
+        }
+
+        // 타이틀 - 테트리스 블록 형태로 그리기
+        drawTetrisLogo(g2, w / 2 - 200, 70);
 
         // 메뉴 항목
         g2.setFont(new Font("SansSerif", Font.PLAIN, 22));
-        int y = 220;
+        int y = menuStartY;
         for (int i = 0; i < items.size(); i++) {
             String t = (i == idx ? "> " : "  ") + items.get(i).getLabel();
             g2.setColor(i == idx ? new Color(120, 200, 255) : Color.LIGHT_GRAY);
             g2.drawString(t, (w - g2.getFontMetrics().stringWidth(t)) / 2, y);
-            y += 40;
+            y += menuItemHeight;
         }
 
         // 하단 힌트 (잘못된 키 입력 시 1초간만 표시)
@@ -86,6 +147,125 @@ public class MenuScreen implements Screen {
         }
     }
 
+    // 테트리스 로고 그리기 (블록 모양으로)
+    private void drawTetrisLogo(Graphics2D g2, int startX, int startY) {
+        int size = 22;
+        int spacing = 4; // 문자 간 간격
+        Color[] colors = {
+            new Color(0, 240, 240),   // I - 청록
+            new Color(240, 160, 0),   // L - 주황
+            new Color(0, 0, 240),     // J - 파랑
+            new Color(240, 240, 0),   // O - 노랑
+            new Color(0, 240, 0),     // S - 초록
+            new Color(160, 0, 240),   // T - 보라
+            new Color(240, 0, 0)      // Z - 빨강
+        };
+        
+        // "TETRIS" 문자를 블록으로 표현
+        int x = startX;
+        
+        // T
+        drawBlockLetter(g2, x, startY, size, colors[5], new int[][]{
+            {1,1,1},
+            {0,1,0},
+            {0,1,0}
+        });
+        x += size * 3 + spacing;
+        
+        // E
+        drawBlockLetter(g2, x, startY, size, colors[0], new int[][]{
+            {1,1,1},
+            {1,1,0},
+            {1,1,1}
+        });
+        x += size * 3 + spacing;
+        
+        // T
+        drawBlockLetter(g2, x, startY, size, colors[6], new int[][]{
+            {1,1,1},
+            {0,1,0},
+            {0,1,0}
+        });
+        x += size * 3 + spacing;
+        
+        // R
+        drawBlockLetter(g2, x, startY, size, colors[2], new int[][]{
+            {1,1,0},
+            {1,1,0},
+            {1,0,1}
+        });
+        x += size * 3 + spacing;
+        
+        // I
+        drawBlockLetter(g2, x, startY, size, colors[1], new int[][]{
+            {1,1,1},
+            {0,1,0},
+            {1,1,1}
+        });
+        x += size * 3 + spacing;
+        
+        // S
+        drawBlockLetter(g2, x, startY, size, colors[4], new int[][]{
+            {0,1,1},
+            {1,1,0},
+            {1,1,0}
+        });
+    }
+    
+    private void drawBlockLetter(Graphics2D g2, int x, int y, int size, Color color, int[][] pattern) {
+        for (int r = 0; r < pattern.length; r++) {
+            for (int c = 0; c < pattern[r].length; c++) {
+                if (pattern[r][c] == 1) {
+                    // 블록 그리기 (그라디언트 효과)
+                    int px = x + c * size;
+                    int py = y + r * size;
+                    
+                    // 메인 블록
+                    g2.setColor(color);
+                    g2.fillRect(px, py, size - 2, size - 2);
+                    
+                    // 하이라이트
+                    g2.setColor(color.brighter());
+                    g2.fillRect(px + 2, py + 2, size - 6, size / 4);
+                    
+                    // 테두리
+                    g2.setColor(color.darker());
+                    g2.drawRect(px, py, size - 2, size - 2);
+                }
+            }
+        }
+    }
+    
+    // 배경 블록 업데이트
+    private void updateFallingBlocks() {
+        // 블록 이동
+        for (int i = fallingBlocks.size() - 1; i >= 0; i--) {
+            FallingBlock fb = fallingBlocks.get(i);
+            fb.y += fb.speed;
+            
+            // 화면 밖으로 나가면 제거
+            if (fb.y > app.getHeight()) {
+                fallingBlocks.remove(i);
+            }
+        }
+        
+        // 새 블록 생성 (확률적으로 계속 생성)
+        if (random.nextInt(100) < 5) {
+            GameManager gm = new GameManager();
+            Block block = gm.makeRandomBlock();
+            int x = random.nextInt(app.getWidth() - 100);
+            float speed = 0.5f + random.nextFloat() * 1.5f;
+            int rotation = random.nextInt(4);
+            
+            // 회전 적용
+            for (int i = 0; i < rotation; i++) {
+                block.rotate();
+            }
+            
+            fallingBlocks.add(new FallingBlock(block, x, -100, speed, rotation));
+        }
+    }
+
     @Override public void onKeyPressed(KeyEvent e) {
         switch (e.getKeyCode()) {
             case KeyEvent.VK_UP:
@@ -99,6 +279,10 @@ public class MenuScreen implements Screen {
                 break;
             case KeyEvent.VK_ESCAPE:
                 System.exit(0);
+                break;
+            case KeyEvent.VK_M:
+                // M키로 음소거 토글
+                AudioManager.getInstance().toggleMute();
                 break;
             default:
                 // 유효하지 않은 키 입력 시 힌트 강조
@@ -118,12 +302,69 @@ public class MenuScreen implements Screen {
         }
         app.repaint();
     }
+    
+    @Override public void onMouseClicked(MouseEvent e) {
+        int mouseY = e.getY();
+        
+        // 클릭된 메뉴 항목 찾기
+        for (int i = 0; i < items.size(); i++) {
+            int itemY = menuStartY + i * menuItemHeight;
+            int itemTop = itemY - 20; // 텍스트 위쪽 여유
+            int itemBottom = itemY + 10; // 텍스트 아래쪽 여유
+            
+            if (mouseY >= itemTop && mouseY <= itemBottom) {
+                // 메뉴 항목 실행
+                items.get(i).getAction().run();
+                break;
+            }
+        }
+    }
+    
+    @Override public void onMouseMoved(MouseEvent e) {
+        int mouseY = e.getY();
+        int oldIdx = idx;
+        
+        // 마우스 위치에 따라 선택 항목 변경
+        for (int i = 0; i < items.size(); i++) {
+            int itemY = menuStartY + i * menuItemHeight;
+            int itemTop = itemY - 20;
+            int itemBottom = itemY + 10;
+            
+            if (mouseY >= itemTop && mouseY <= itemBottom) {
+                idx = i;
+                break;
+            }
+        }
+        
+        // 선택이 바뀌었으면 다시 그리기
+        if (oldIdx != idx) {
+            app.repaint();
+        }
+    }
+    
     //필요시 포커스 관련 처리 추가 가능
-    @Override public void onShow() {}
+    @Override public void onShow() {
+        // 메뉴 BGM 재생 (없으면 조용히 무시)
+        try {
+            AudioManager.getInstance().playBGM("/audio/menu_theme.wav");
+        } catch (Exception e) {
+            // 오디오 파일이 없어도 게임은 계속 진행
+        }
+        
+        // 배경 애니메이션 타이머 시작
+        animationTimer = new Timer(30, e -> {
+            updateFallingBlocks();
+            app.repaint();
+        });
+        animationTimer.start();
+    }
     //필요시 리소스 정리
     @Override public void onHide() {
         if (repaintTimer != null) {
             repaintTimer.stop();
+        }
+        if (animationTimer != null) {
+            animationTimer.stop();
         }
     }
     
