@@ -5,7 +5,7 @@ import org.mockito.Mockito;
 import se.tetris.team3.core.GameMode;
 import se.tetris.team3.core.Settings;
 import se.tetris.team3.ui.AppFrame;
-import se.tetris.team3.ui.BattleScreen;
+import se.tetris.team3.ui.screen.BattleScreen;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -68,15 +68,6 @@ class BattleScreenSimpleTest {
     void testConstructorTimeMode() {
         assertDoesNotThrow(() -> {
             screen = new BattleScreen(app, GameMode.BATTLE_TIME, settings, 180);
-            assertNotNull(screen);
-        });
-    }
-
-    @Test
-    @DisplayName("BattleScreen 생성 - AI 모드")
-    void testConstructorWithAI() {
-        assertDoesNotThrow(() -> {
-            screen = new BattleScreen(app, GameMode.BATTLE_NORMAL, settings, 0, true);
             assertNotNull(screen);
         });
     }
@@ -166,20 +157,5 @@ class BattleScreenSimpleTest {
         screen = new BattleScreen(app, GameMode.BATTLE_NORMAL, settings, 0);
         // blockSizeH가 1.7배로 설정되어 렌더링되는지 확인
         assertDoesNotThrow(() -> screen.render(g2));
-    }
-
-    @Test
-    @DisplayName("AI 모드와 일반 모드 렌더링 차이 없음")
-    void testAIModeRendering() {
-        BattleScreen normalScreen = new BattleScreen(app, GameMode.BATTLE_NORMAL, settings, 0, false);
-        BattleScreen aiScreen = new BattleScreen(app, GameMode.BATTLE_NORMAL, settings, 0, true);
-        
-        assertDoesNotThrow(() -> {
-            normalScreen.render(g2);
-            aiScreen.render(g2);
-        });
-        
-        normalScreen.onHide();
-        aiScreen.onHide();
     }
 }

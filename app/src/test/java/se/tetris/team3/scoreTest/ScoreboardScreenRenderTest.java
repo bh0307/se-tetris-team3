@@ -1,15 +1,7 @@
 package se.tetris.team3.scoreTest;
 
-import org.junit.jupiter.api.*;
-import org.mockito.Mockito;
-import se.tetris.team3.core.GameMode;
-import se.tetris.team3.core.Settings;
-import se.tetris.team3.ui.AppFrame;
-import se.tetris.team3.ui.score.ScoreManager;
-import se.tetris.team3.ui.score.ScoreManager.ScoreEntry;
-import se.tetris.team3.ui.score.ScoreboardScreen;
-
-import java.awt.*;
+import java.awt.FontMetrics;
+import java.awt.Graphics2D;
 import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
@@ -17,9 +9,24 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import org.junit.jupiter.api.AfterEach;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import static org.mockito.ArgumentMatchers.any;
+import org.mockito.Mockito;
+import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import se.tetris.team3.core.GameMode;
+import se.tetris.team3.core.Settings;
+import se.tetris.team3.gameManager.ScoreManager;
+import se.tetris.team3.gameManager.ScoreManager.ScoreEntry;
+import se.tetris.team3.ui.AppFrame;
+import se.tetris.team3.ui.screen.ScoreboardScreen;
 
 @DisplayName("ScoreboardScreen 렌더링 및 UI 테스트")
 class ScoreboardScreenRenderTest {
