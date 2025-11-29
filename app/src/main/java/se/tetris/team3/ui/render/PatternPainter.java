@@ -52,7 +52,7 @@ public final class PatternPainter {
             fillRoundedRect(g2, x, y, width, height, baseColor);
             return;
         }
-        TexturePaint tp = hatchForKey(block != null ? block.getClass().getSimpleName() : "default");
+        TexturePaint tp = hatchForKeyWithAlpha(block != null ? block.getClass().getSimpleName() : "default", 255);
         fillRoundedRectWithTexture(g2, x, y, width, height, tp, baseColor.darker());
     }
 

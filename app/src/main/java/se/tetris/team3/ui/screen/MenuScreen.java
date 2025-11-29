@@ -1,4 +1,4 @@
-package se.tetris.team3.ui;
+package se.tetris.team3.ui.screen;
 
 import java.awt.Color;
 import java.awt.Font;
@@ -12,12 +12,12 @@ import java.util.Random;
 
 import javax.swing.Timer;
 
-import se.tetris.team3.audio.AudioManager;
 import se.tetris.team3.blocks.Block;
 import se.tetris.team3.core.GameMode;
-import se.tetris.team3.core.Settings;
-import se.tetris.team3.ui.score.ScoreManager;
-import se.tetris.team3.ui.score.ScoreboardScreen;
+import se.tetris.team3.gameManager.GameManager;
+import se.tetris.team3.gameManager.MenuItem;
+import se.tetris.team3.gameManager.ScoreManager;
+import se.tetris.team3.ui.AppFrame;
 
 // 메뉴 항목: 클래식 시작, 아이템 모드 시작, 설정, 스코어보드, 종료
 public class MenuScreen implements Screen {
@@ -61,13 +61,6 @@ public class MenuScreen implements Screen {
         items.add(new MenuItem("아이템 모드 시작", () -> {
             app.getSettings().setGameMode(GameMode.ITEM);
             app.showScreen(new GameScreen(app, new GameManager(GameMode.ITEM)));
-        }));
-        
-        items.add(new MenuItem("AI 모드", () -> {
-            // AI와 1:1 대전 (일반 대전 모드)
-            Settings settings = app.getSettings();
-            BattleScreen aiScreen = new BattleScreen(app, GameMode.BATTLE_NORMAL, settings, 0, true);
-            app.showScreen(aiScreen);
         }));
 
         items.add(new MenuItem("대전 모드", () -> app.showScreen(new BattleModeSelectScreen(app, app.getSettings()))));
@@ -251,8 +244,16 @@ public class MenuScreen implements Screen {
         
         // 새 블록 생성 (확률적으로 계속 생성)
         if (random.nextInt(100) < 5) {
-            GameManager gm = new GameManager();
-            Block block = gm.makeRandomBlock();
+            Block[] blocks = {
+                new se.tetris.team3.blocks.IBlock(),
+                new se.tetris.team3.blocks.JBlock(),
+                new se.tetris.team3.blocks.LBlock(),
+                new se.tetris.team3.blocks.OBlock(),
+                new se.tetris.team3.blocks.SBlock(),
+                new se.tetris.team3.blocks.TBlock(),
+                new se.tetris.team3.blocks.ZBlock()
+            };
+            Block block = blocks[random.nextInt(blocks.length)];
             int x = random.nextInt(app.getWidth() - 100);
             float speed = 0.5f + random.nextFloat() * 1.5f;
             int rotation = random.nextInt(4);
@@ -279,10 +280,6 @@ public class MenuScreen implements Screen {
                 break;
             case KeyEvent.VK_ESCAPE:
                 System.exit(0);
-                break;
-            case KeyEvent.VK_M:
-                // M키로 음소거 토글
-                AudioManager.getInstance().toggleMute();
                 break;
             default:
                 // 유효하지 않은 키 입력 시 힌트 강조
@@ -344,13 +341,6 @@ public class MenuScreen implements Screen {
     
     //필요시 포커스 관련 처리 추가 가능
     @Override public void onShow() {
-        // 메뉴 BGM 재생 (없으면 조용히 무시)
-        try {
-            AudioManager.getInstance().playBGM("/audio/menu_theme.wav");
-        } catch (Exception e) {
-            // 오디오 파일이 없어도 게임은 계속 진행
-        }
-        
         // 배경 애니메이션 타이머 시작
         animationTimer = new Timer(30, e -> {
             updateFallingBlocks();

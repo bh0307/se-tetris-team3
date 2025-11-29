@@ -1,4 +1,4 @@
-package se.tetris.team3.ui;
+package se.tetris.team3.ui.screen;
 
 import java.awt.Color;
 import java.awt.Font;
@@ -8,10 +8,13 @@ import java.awt.event.KeyEvent;
 
 import javax.swing.Timer;
 
-import se.tetris.team3.ai.AIPlayer;
-import se.tetris.team3.audio.AudioManager;
+import se.tetris.team3.blocks.Block;
 import se.tetris.team3.core.GameMode;
 import se.tetris.team3.core.Settings;
+import se.tetris.team3.gameManager.BattleGameManager;
+import se.tetris.team3.gameManager.GameManager;
+import se.tetris.team3.ui.AppFrame;
+import se.tetris.team3.ui.render.PatternPainter;
 
 /**
  * 2인 대전 모드 화면
@@ -38,16 +41,11 @@ public class BattleScreen implements Screen {
     // 타이머 (게임 루프 + 낙하)
     private Timer gameTimer;
     private Timer dropTimer;
-    private Timer aiTimer; // AI 플레이어용 타이머
 
     private long player1LastDrop;
     private long player2LastDrop;
 
     private boolean paused = false;
-    
-    // AI 플레이어 관련
-    private AIPlayer aiPlayer;
-    private boolean isPlayer2AI = false; // Player2가 AI인지 여부
 
     /**
      * BattleScreen 생성자
@@ -57,41 +55,16 @@ public class BattleScreen implements Screen {
      * @param timeLimitSeconds 시간제한 모드일 경우 제한 시간(초), 아니면 0
      */
     public BattleScreen(AppFrame frame, GameMode mode, Settings settings, int timeLimitSeconds) {
-        this(frame, mode, settings, timeLimitSeconds, false);
-    }
-    
-    /**
-     * BattleScreen 생성자 (AI 옵션 포함)
-     * @param frame        부모 프레임
-     * @param mode         대전 모드 (BATTLE_NORMAL, BATTLE_ITEM, BATTLE_TIME)
-     * @param settings     게임 설정
-     * @param timeLimitSeconds 시간제한 모드일 경우 제한 시간(초), 아니면 0
-     * @param isPlayer2AI  Player2를 AI로 설정할지 여부
-     */
-    public BattleScreen(AppFrame frame, GameMode mode, Settings settings, int timeLimitSeconds, boolean isPlayer2AI) {
         this.frame = frame;
         this.settings = settings;
         this.battleManager = new BattleGameManager(mode, settings, timeLimitSeconds);
-        this.isPlayer2AI = isPlayer2AI;
 
         player1LastDrop = System.currentTimeMillis();
         player2LastDrop = System.currentTimeMillis();
-        
-        // AI 플레이어 초기화
-        if (isPlayer2AI) {
-            aiPlayer = new AIPlayer(battleManager.getPlayer2Manager());
-        }
     }
 
     @Override
     public void onShow() {
-        // 대전 BGM 재생
-        try {
-            AudioManager.getInstance().playBGM("/audio/battle_theme.wav");
-        } catch (Exception e) {
-            // 오디오 파일이 없어도 게임은 계속 진행
-        }
-        
         // 게임 로직 업데이트(60fps 정도)
         gameTimer = new Timer(16, evt -> {
             if (!paused) {
@@ -122,58 +95,12 @@ public class BattleScreen implements Screen {
             }
         });
         dropTimer.start();
-        
-        // AI 플레이어 타이머 (0.5~1초 간격으로 랜덤하게 호출)
-        if (isPlayer2AI && aiPlayer != null) {
-            aiTimer = new Timer(300 + (int)(Math.random() * 400), evt -> {
-                if (!paused && !battleManager.isGameOver()) {
-                    executeAIAction();
-                    // 다음 호출 간격도 랜덤하게 설정 (0.3~0.7초)
-                    aiTimer.setDelay(300 + (int)(Math.random() * 400));
-                }
-            });
-            aiTimer.start();
-        }
     }
 
     @Override
     public void onHide() {
         if (gameTimer != null) gameTimer.stop();
         if (dropTimer != null) dropTimer.stop();
-        if (aiTimer != null) aiTimer.stop();
-    }
-    
-    /**
-     * AI 플레이어의 다음 액션 실행
-     */
-    private void executeAIAction() {
-        if (aiPlayer == null) return;
-        
-        AIPlayer.AIAction action = aiPlayer.getNextAction();
-        GameManager p2 = battleManager.getPlayer2Manager();
-        
-        switch (action) {
-            case MOVE_LEFT:
-                p2.tryMove(p2.getBlockX() - 1, p2.getBlockY());
-                break;
-            case MOVE_RIGHT:
-                p2.tryMove(p2.getBlockX() + 1, p2.getBlockY());
-                break;
-            case ROTATE:
-                p2.rotateBlock();
-                break;
-            case SOFT_DROP:
-                p2.stepDownOrFix();
-                player2LastDrop = System.currentTimeMillis();
-                break;
-            case HARD_DROP:
-                p2.hardDrop();
-                player2LastDrop = System.currentTimeMillis();
-                break;
-            case NONE:
-                // 아무것도 하지 않음
-                break;
-        }
     }
 
     @Override
@@ -222,27 +149,23 @@ public class BattleScreen implements Screen {
                 player1LastDrop = System.currentTimeMillis();
                 break;
 
-            // Player2: WASD (AI 모드가 아닐 때만)
+            // Player2: WASD
             case KeyEvent.VK_A:
-                if (!isPlayer2AI) p2.tryMove(p2.getBlockX() - 1, p2.getBlockY());
+                p2.tryMove(p2.getBlockX() - 1, p2.getBlockY());
                 break;
             case KeyEvent.VK_D:
-                if (!isPlayer2AI) p2.tryMove(p2.getBlockX() + 1, p2.getBlockY());
+                p2.tryMove(p2.getBlockX() + 1, p2.getBlockY());
                 break;
             case KeyEvent.VK_S:
-                if (!isPlayer2AI) {
-                    p2.stepDownOrFix();
-                    player2LastDrop = System.currentTimeMillis();
-                }
+                p2.stepDownOrFix();
+                player2LastDrop = System.currentTimeMillis();
                 break;
             case KeyEvent.VK_W:
-                if (!isPlayer2AI) p2.rotateBlock();
+                p2.rotateBlock();
                 break;
             case KeyEvent.VK_ENTER:
-                if (!isPlayer2AI) {
-                    p2.hardDrop();
-                    player2LastDrop = System.currentTimeMillis();
-                }
+                p2.hardDrop();
+                player2LastDrop = System.currentTimeMillis();
                 break;
 
             // ESC: 메뉴로
@@ -277,9 +200,8 @@ public class BattleScreen implements Screen {
         // 왼쪽 플레이어
         drawPlayerBoard(g2, leftBoardX, boardY, battleManager.getPlayer1Manager(), "Player 1", 1);
 
-        // 오른쪽 플레이어 (AI 여부에 따라 이름 변경)
-        String player2Name = isPlayer2AI ? "Computer" : "Player 2";
-        drawPlayerBoard(g2, rightBoardX, boardY, battleManager.getPlayer2Manager(), player2Name, 2);
+        // 오른쪽 플레이어
+        drawPlayerBoard(g2, rightBoardX, boardY, battleManager.getPlayer2Manager(), "Player 2", 2);
 
         // 중앙 시간/승자/일시정지 표시
         drawCenterInfo(g2, width, height);
@@ -366,7 +288,7 @@ public class BattleScreen implements Screen {
 
         // 현재 블럭 + 고스트 블록(하드 드롭 위치 미리보기)
         if (!manager.isGameOver() && manager.getCurrentBlock() != null) {
-            var cur = manager.getCurrentBlock();
+            Block cur = manager.getCurrentBlock();
             int[][] shape = cur.getShape();
             Color base = cur.getColor();
             int bx = manager.getBlockX();
@@ -631,8 +553,7 @@ public class BattleScreen implements Screen {
                 resultText = "Player 1 WINS!";
                 g2.setColor(Color.CYAN);
             } else {
-                // AI 모드일 때는 "AI WINS!" 표시
-                resultText = isPlayer2AI ? "AI WINS!" : "Player 2 WINS!";
+                resultText = "Player 2 WINS!";
                 g2.setColor(Color.RED);
             }
 
