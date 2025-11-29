@@ -8,6 +8,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 
 public class AppFrame extends JFrame {
     private final Settings settings = new Settings();
@@ -31,6 +33,27 @@ public class AppFrame extends JFrame {
         setContentPane(canvas);
         canvas.setFocusable(true);
         canvas.requestFocusInWindow();
+
+        // 마우스 이벤트 리스너 추가
+        canvas.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (current != null) {
+                    current.onMouseClicked(e);
+                    repaint();
+                }
+            }
+        });
+        
+        canvas.addMouseMotionListener(new MouseAdapter() {
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                if (current != null) {
+                    current.onMouseMoved(e);
+                    repaint();
+                }
+            }
+        });
 
         KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(ev -> {
             if (ev.getID() == KeyEvent.KEY_PRESSED) {

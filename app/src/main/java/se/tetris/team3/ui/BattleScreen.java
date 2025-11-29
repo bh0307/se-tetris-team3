@@ -28,6 +28,8 @@ public class BattleScreen implements Screen {
 
     // 화면 레이아웃 관련
     private int blockSize;
+    private int blockSizeW; // 블록 가로 길이
+    private int blockSizeH; // 블록 세로 길이
     private int boardWidth;
     private int boardHeight;
     private int centerGap;
@@ -300,9 +302,11 @@ public class BattleScreen implements Screen {
 
         // 화면에 안 튀어나가도록 상한은 maxFitSize, 너무 작진 않게 하한은 12
         blockSize = Math.max(12, Math.min(preferred, maxFitSize));
+        blockSizeW = (int)(blockSize * 1.2); // 가로 길이 20% 증가
+        blockSizeH = (int)(blockSize * 1.7); // 세로 길이 70% 증가
 
-        boardWidth  = 10 * blockSize;
-        boardHeight = 20 * blockSize;
+        boardWidth  = 10 * blockSizeW;
+        boardHeight = 20 * blockSizeH;
 
         centerGap = Math.max(35, blockSize * 2);
         topMargin = Math.max(75, (screenHeight - boardHeight - 100) / 2);
@@ -340,16 +344,16 @@ public class BattleScreen implements Screen {
         // 고정 블럭
         for (int row = 0; row < 20; row++) {
             for (int col = 0; col < 10; col++) {
-                int cellX = x + col * blockSize;
-                int cellY = y + row * blockSize;
+                int cellX = x + col * blockSizeW;
+                int cellY = y + row * blockSizeH;
 
                 if (manager.isRowFlashing(row)) {
                     // 플래시 효과
                     g2.setColor(Color.WHITE);
-                    g2.fillRect(cellX, cellY, blockSize - 1, blockSize - 1);
+                    g2.fillRect(cellX, cellY, blockSizeW - 1, blockSizeH - 1);
                 } else if (manager.getFieldValue(row, col) == 1) {
                     g2.setColor(Color.DARK_GRAY);
-                    g2.fillRect(cellX, cellY, blockSize - 1, blockSize - 1);
+                    g2.fillRect(cellX, cellY, blockSizeW - 1, blockSizeH - 1);
 
                     // 고정 블럭에 아이템이 있으면 글자 표시
                     char itemType = manager.getItemType(row, col);
@@ -397,10 +401,10 @@ public class BattleScreen implements Screen {
                         int gx = bx + c;
                         int gy = ghostY + r;
                         if (gx >= 0 && gx < 10 && gy >= 0 && gy < 20) {
-                            int cellX = x + gx * blockSize;
-                            int cellY = y + gy * blockSize;
+                            int cellX = x + gx * blockSizeW;
+                            int cellY = y + gy * blockSizeH;
                             g2.setColor(ghostColor);
-                            g2.fillRect(cellX, cellY, blockSize - 1, blockSize - 1);
+                            g2.fillRect(cellX, cellY, blockSizeW - 1, blockSizeH - 1);
                         }
                     }
                 }
@@ -420,10 +424,10 @@ public class BattleScreen implements Screen {
                         int gx = bx + c;
                         int gy = by + r;
                         if (gx >= 0 && gx < 10 && gy >= 0 && gy < 20) {
-                            int cellX = x + gx * blockSize;
-                            int cellY = y + gy * blockSize;
+                            int cellX = x + gx * blockSizeW;
+                            int cellY = y + gy * blockSizeH;
                             g2.setColor(base);
-                            g2.fillRect(cellX, cellY, blockSize - 1, blockSize - 1);
+                            g2.fillRect(cellX, cellY, blockSizeW - 1, blockSizeH - 1);
                             if (cur.getItemType() != 0 && ir != null && ic != null
                                     && r == ir && c == ic) {
                                 GameScreen.drawCenteredChar(g2, cellX, cellY, blockSize, cur.getItemType());

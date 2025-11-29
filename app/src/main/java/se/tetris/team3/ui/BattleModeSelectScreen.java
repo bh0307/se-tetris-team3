@@ -5,6 +5,7 @@ import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
 
 import se.tetris.team3.core.GameMode;
 import se.tetris.team3.core.Settings;
@@ -23,6 +24,11 @@ public class BattleModeSelectScreen implements Screen {
     private int selectedMode = 0;  // 0: 일반, 1: 아이템, 2: 시간제한
     private int timeLimit = 3;     // 시간제한 모드의 제한 시간 (분)
     private boolean isAIMode = false; // Player2를 AI로 설정할지 여부
+    
+    // 마우스 상호작용을 위한 좌표
+    private int aiBoxY = 170;
+    private int modeStartY = 250;
+    private int modeSpacing = 120;
     
     private final String[] modeNames = {
         "Normal Battle",
@@ -106,6 +112,52 @@ public class BattleModeSelectScreen implements Screen {
     }
     
     @Override
+    public void onMouseClicked(MouseEvent e) {
+        int mouseX = e.getX();
+        int mouseY = e.getY();
+        int centerX = frame.getWidth() / 2;
+        
+        // 모드 선택 박스 클릭
+        for (int i = 0; i < modeNames.length; i++) {
+            int y = modeStartY + i * modeSpacing;
+            int boxTop = y - 40;
+            int boxBottom = y + 100;
+            
+            if (mouseY >= boxTop && mouseY <= boxBottom &&
+                mouseX >= centerX - 250 && mouseX <= centerX + 250) {
+                selectedMode = i;
+                startBattle();
+                return;
+            }
+        }
+    }
+    
+    @Override
+    public void onMouseMoved(MouseEvent e) {
+        int mouseX = e.getX();
+        int mouseY = e.getY();
+        int centerX = frame.getWidth() / 2;
+        int oldMode = selectedMode;
+        
+        // 모드 선택 박스 호버
+        for (int i = 0; i < modeNames.length; i++) {
+            int y = modeStartY + i * modeSpacing;
+            int boxTop = y - 40;
+            int boxBottom = y + 100;
+            
+            if (mouseY >= boxTop && mouseY <= boxBottom &&
+                mouseX >= centerX - 250 && mouseX <= centerX + 250) {
+                selectedMode = i;
+                break;
+            }
+        }
+        
+        if (oldMode != selectedMode) {
+            frame.repaint();
+        }
+    }
+    
+    @Override
     public void render(Graphics2D g2) {
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         
@@ -132,7 +184,6 @@ public class BattleModeSelectScreen implements Screen {
         g2.drawString(subtitle, centerX - subtitleWidth / 2, 140);
         
         // AI 모드 표시
-        int aiBoxY = 170;
         if (isAIMode) {
             g2.setColor(new Color(0, 255, 0, 50));
             g2.fillRoundRect(centerX - 150, aiBoxY, 300, 40, 10, 10);
@@ -148,11 +199,8 @@ public class BattleModeSelectScreen implements Screen {
         g2.drawString(aiText, centerX - aiTextWidth / 2, aiBoxY + 26);
         
         // 모드 목록
-        int startY = 250;
-        int spacing = 120;
-        
         for (int i = 0; i < modeNames.length; i++) {
-            int y = startY + i * spacing;
+            int y = modeStartY + i * modeSpacing;
             boolean isSelected = (i == selectedMode);
             
             // 선택 표시

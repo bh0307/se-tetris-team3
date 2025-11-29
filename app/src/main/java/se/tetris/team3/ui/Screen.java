@@ -3,6 +3,7 @@ package se.tetris.team3.ui;
 
 import java.awt.Graphics2D;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
 
 public interface Screen {
     // 화면 그리기
@@ -10,6 +11,10 @@ public interface Screen {
 
     // 키 입력 처리
     void onKeyPressed(KeyEvent e);
+
+    // 마우스 입력 처리
+    default void onMouseClicked(MouseEvent e) {}
+    default void onMouseMoved(MouseEvent e) {}
 
     // 화면 전환 시 훅 (상태 초기화, 타이머 시작/정지 등에 사용)
     default void onShow() {}

@@ -142,6 +142,7 @@ public class GameScreen implements Screen {
     @Override
     public void render(Graphics2D g2) {
         int blockSize = settings.resolveBlockSize();
+        int blockSizeH = (int)(blockSize * 1.15); // 세로 길이 15% 증가
         int padding = 18;
 
         g2.setColor(Color.BLACK);
@@ -170,7 +171,7 @@ public class GameScreen implements Screen {
 
         g2.setColor(Color.WHITE);
         g2.setStroke(new BasicStroke(3));
-        g2.drawRect(padding, padding, blockSize * 10, blockSize * 20);
+        g2.drawRect(padding, padding, blockSize * 10, blockSizeH * 20);
         g2.setStroke(new BasicStroke(1));
 
         alignSpawnIfNewBlock();
@@ -180,16 +181,18 @@ public class GameScreen implements Screen {
             for (int c = 0; c < REGION_COLS; c++) {
                 if (manager.getFieldValue(r, c) != 0) {
                     int x = padding + c * blockSize;
-                    int y = padding + r * blockSize;
+                    int y = padding + r * blockSizeH;
                     
                     // 플래시 효과: 해당 줄이 깨지기 직전이면 하얗게 렌더링
                     if (manager.isRowFlashing(r)) {
                         g2.setColor(Color.WHITE);
-                        g2.fillRect(x, y, blockSize, blockSize);
+                        g2.fillRect(x, y, blockSize, blockSizeH);
                         g2.setColor(Color.LIGHT_GRAY);
-                        g2.drawRect(x, y, blockSize - 1, blockSize - 1);
+                        g2.drawRect(x, y, blockSize - 1, blockSizeH - 1);
                     } else {
-                        PatternPainter.drawCell(g2, x, y, blockSize, Color.GRAY, null, settings.isColorBlindMode());
+                        Color blockColor = manager.getBlockColor(r, c);
+                        if (blockColor == null) blockColor = Color.GRAY;
+                        PatternPainter.drawCellRect(g2, x, y, blockSize, blockSizeH, blockColor, null, settings.isColorBlindMode());
                         
                         // 고정된 블록에 아이템이 있으면 글자 표시
                         if (manager.hasItem(r, c)) {
@@ -238,8 +241,8 @@ public class GameScreen implements Screen {
                             int gx = bx + c, gy = ghostY + r;
                             if (gx>=0 && gx<REGION_COLS && gy>=0 && gy<REGION_ROWS) {
                                 int x = padding + gx * blockSize;
-                                int y = padding + gy * blockSize;
-                                PatternPainter.drawCell(g2, x, y, blockSize, ghostColor, cur, settings.isColorBlindMode());
+                                int y = padding + gy * blockSizeH;
+                                PatternPainter.drawCellRect(g2, x, y, blockSize, blockSizeH, ghostColor, cur, settings.isColorBlindMode());
                             }
                         }
                     }
@@ -259,8 +262,8 @@ public class GameScreen implements Screen {
                             int gx = bx + c, gy = by + r;
                             if (gx>=0 && gx<REGION_COLS && gy>=0 && gy<REGION_ROWS) {
                                 int x = padding + gx * blockSize;
-                                int y = padding + gy * blockSize;
-                                PatternPainter.drawCell(g2, x, y, blockSize, base, cur, settings.isColorBlindMode());
+                                int y = padding + gy * blockSizeH;
+                                PatternPainter.drawCellRect(g2, x, y, blockSize, blockSizeH, base, cur, settings.isColorBlindMode());
                                 if (cur.getItemType() != 0 && ir != null && ic != null && r == ir && c == ic) {
                                     drawCenteredChar(g2, x, y, blockSize, cur.getItemType());
                                 }

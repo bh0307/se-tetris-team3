@@ -63,13 +63,13 @@ public class Settings {
     public int resolveBlockSize() {
         switch (sizePreset) {
             case SMALL:
-                return 24;
+                return 26;
             case MEDIUM:
-                return 30;
+                return 32;
             case LARGE:
-                return 36;
+                return 38;
             default:
-                return 30;
+                return 32;
         }
     }
 
