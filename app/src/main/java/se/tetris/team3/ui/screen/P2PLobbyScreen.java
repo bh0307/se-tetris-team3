@@ -43,6 +43,7 @@ public class P2PLobbyScreen implements Screen, P2PConnectionListener {
     private boolean myReady = false;
     private boolean otherReady = false;
     private String statusMessage = "";
+    private boolean receivedInitialModeInfo = false;  // 초기 MODE_INFO 수신 여부
 
     // 서버 전용 설정
     private int selectedModeIndex = 0;   // 0=Normal,1=Item,2=TimeAttack
@@ -152,7 +153,7 @@ public class P2PLobbyScreen implements Screen, P2PConnectionListener {
     @Override
     public void onDisconnected(String reason) {
         connected = false;
-        statusMessage = "연결이 끊어졌습니다: " + reason;
+        statusMessage = reason;
         frame.repaint();
     }
 
@@ -170,7 +171,12 @@ public class P2PLobbyScreen implements Screen, P2PConnectionListener {
             case MODE_INFO:
                 lobbyMode = msg.gameMode;
                 lobbyTimeLimitSeconds = msg.timeLimitSeconds;
-                statusMessage = "상대가 모드를 선택했습니다.";
+                // 초기 연결 시 받는 첫 MODE_INFO는 메시지 표시 안 함
+                if (receivedInitialModeInfo) {
+                    statusMessage = "상대가 모드를 선택했습니다.";
+                } else {
+                    receivedInitialModeInfo = true;
+                }
                 break;
             case READY_STATE:
                 otherReady = msg.ready;
@@ -193,7 +199,12 @@ public class P2PLobbyScreen implements Screen, P2PConnectionListener {
 
     @Override
     public void onNetworkError(Exception e) {
-        statusMessage = "네트워크 오류: " + e.getMessage();
+        connected = false;
+        String errorMsg = e.getMessage();
+        if (errorMsg == null || errorMsg.trim().isEmpty()) {
+            errorMsg = e.getClass().getSimpleName();
+        }
+        statusMessage = "네트워크 오류: " + errorMsg;
         frame.repaint();
     }
 
