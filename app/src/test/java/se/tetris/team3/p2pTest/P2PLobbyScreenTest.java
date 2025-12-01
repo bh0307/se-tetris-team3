@@ -507,6 +507,190 @@ public class P2PLobbyScreenTest {
         assertDoesNotThrow(() -> screen.render(g2));
     }
 
+    @Test
+    @DisplayName("서버 모드 선택 시 접속 대기 메시지 표시")
+    void serverMode_displaysWaitingMessage() throws Exception {
+        P2PLobbyScreen screen = new P2PLobbyScreen(app, settings);
+        screen.onShow();
+        
+        // 서버 모드 선택 (1 키)
+        KeyEvent event = new KeyEvent(app, KeyEvent.KEY_PRESSED, 0, 0, KeyEvent.VK_1, '1');
+        screen.onKeyPressed(event);
+        
+        // statusMessage 확인
+        Field statusField = P2PLobbyScreen.class.getDeclaredField("statusMessage");
+        statusField.setAccessible(true);
+        String status = (String) statusField.get(screen);
+        
+        assertTrue(status.contains("접속 대기중"), "서버 모드 선택 시 '접속 대기중' 메시지 표시");
+    }
+    
+    @Test
+    @DisplayName("클라이언트 모드 선택 시 IP 입력 안내 메시지 표시")
+    void clientMode_displaysIPInputMessage() throws Exception {
+        P2PLobbyScreen screen = new P2PLobbyScreen(app, settings);
+        screen.onShow();
+        
+        // 클라이언트 모드 선택 (2 키)
+        KeyEvent event = new KeyEvent(app, KeyEvent.KEY_PRESSED, 0, 0, KeyEvent.VK_2, '2');
+        screen.onKeyPressed(event);
+        
+        // statusMessage 확인
+        Field statusField = P2PLobbyScreen.class.getDeclaredField("statusMessage");
+        statusField.setAccessible(true);
+        String status = (String) statusField.get(screen);
+        
+        assertTrue(status.contains("IP 입력"), "클라이언트 모드 선택 시 'IP 입력' 안내 메시지 표시");
+    }
+    
+    @Test
+    @DisplayName("클라이언트 IP 입력 후 Enter 시 접속 시도 메시지 표시")
+    void clientIPInput_displaysConnectingMessage() throws Exception {
+        P2PLobbyScreen screen = new P2PLobbyScreen(app, settings);
+        FakeConnection conn = new FakeConnection(null);
+        
+        Field connField = P2PLobbyScreen.class.getDeclaredField("connection");
+        connField.setAccessible(true);
+        connField.set(screen, conn);
+        
+        screen.onShow();
+        
+        // 클라이언트 모드 선택
+        KeyEvent event2 = new KeyEvent(app, KeyEvent.KEY_PRESSED, 0, 0, KeyEvent.VK_2, '2');
+        screen.onKeyPressed(event2);
+        
+        // IP 입력
+        Field inputIPField = P2PLobbyScreen.class.getDeclaredField("inputIP");
+        inputIPField.setAccessible(true);
+        inputIPField.set(screen, "127.0.0.1");
+        
+        // Enter 키
+        KeyEvent enterEvent = new KeyEvent(app, KeyEvent.KEY_PRESSED, 0, 0, KeyEvent.VK_ENTER, '\n');
+        screen.onKeyPressed(enterEvent);
+        
+        // statusMessage 확인
+        Field statusField = P2PLobbyScreen.class.getDeclaredField("statusMessage");
+        statusField.setAccessible(true);
+        String status = (String) statusField.get(screen);
+        
+        assertTrue(status.contains("접속 중"), "IP 입력 후 Enter 시 '접속 중' 메시지 표시");
+        assertEquals("127.0.0.1", conn.connectArg, "올바른 IP로 connectTo 호출");
+    }
+    
+    @Test
+    @DisplayName("연결 성공 시 '연결 완료' 메시지 표시")
+    void onConnected_displaysSuccessMessage() throws Exception {
+        P2PLobbyScreen screen = new P2PLobbyScreen(app, settings);
+        FakeConnection conn = new FakeConnection(null);
+        
+        Field connField = P2PLobbyScreen.class.getDeclaredField("connection");
+        connField.setAccessible(true);
+        connField.set(screen, conn);
+        
+        screen.onShow();
+        
+        // 연결 성공 콜백 (서버로)
+        screen.onConnected(true);
+        
+        // statusMessage 확인
+        Field statusField = P2PLobbyScreen.class.getDeclaredField("statusMessage");
+        statusField.setAccessible(true);
+        String status = (String) statusField.get(screen);
+        
+        assertTrue(status.contains("연결 완료"), "연결 성공 시 '연결 완료' 메시지 표시");
+        assertTrue(status.contains("Server"), "서버 연결 시 'Server' 표시");
+    }
+    
+    @Test
+    @DisplayName("연결 끊김 시 적절한 메시지 표시")
+    void onDisconnected_displaysDisconnectMessage() throws Exception {
+        P2PLobbyScreen screen = new P2PLobbyScreen(app, settings);
+        screen.onShow();
+        
+        // 연결 끊김 콜백
+        screen.onDisconnected("상대방이 연결을 종료했습니다");
+        
+        // statusMessage 확인
+        Field statusField = P2PLobbyScreen.class.getDeclaredField("statusMessage");
+        statusField.setAccessible(true);
+        String status = (String) statusField.get(screen);
+        
+        assertEquals("상대방이 연결을 종료했습니다", status, "연결 끊김 메시지가 그대로 표시됨");
+        
+        // connected 플래그 확인
+        Field connectedField = P2PLobbyScreen.class.getDeclaredField("connected");
+        connectedField.setAccessible(true);
+        boolean connected = (boolean) connectedField.get(screen);
+        
+        assertFalse(connected, "연결 끊김 시 connected 플래그가 false로 설정");
+    }
+    
+    @Test
+    @DisplayName("네트워크 오류 시 오류 메시지 표시 및 연결 상태 업데이트")
+    void onNetworkError_displaysErrorAndUpdatesConnectionState() throws Exception {
+        P2PLobbyScreen screen = new P2PLobbyScreen(app, settings);
+        screen.onShow();
+        
+        // 네트워크 오류 콜백
+        Exception testError = new java.io.EOFException();
+        screen.onNetworkError(testError);
+        
+        // statusMessage 확인
+        Field statusField = P2PLobbyScreen.class.getDeclaredField("statusMessage");
+        statusField.setAccessible(true);
+        String status = (String) statusField.get(screen);
+        
+        assertTrue(status.contains("네트워크 오류"), "네트워크 오류 메시지 표시");
+        assertTrue(status.contains("EOFException"), "예외 타입 표시");
+        
+        // connected 플래그 확인
+        Field connectedField = P2PLobbyScreen.class.getDeclaredField("connected");
+        connectedField.setAccessible(true);
+        boolean connected = (boolean) connectedField.get(screen);
+        
+        assertFalse(connected, "네트워크 오류 시 connected 플래그가 false로 설정");
+    }
+    
+    @Test
+    @DisplayName("초기 MODE_INFO 수신 시 메시지 표시 안 함")
+    void initialModeInfo_doesNotDisplayMessage() throws Exception {
+        P2PLobbyScreen screen = new P2PLobbyScreen(app, settings);
+        screen.onShow();
+        
+        // 초기 MODE_INFO 수신
+        P2PMessage modeMsg = P2PMessage.modeInfo(se.tetris.team3.core.GameMode.BATTLE_ITEM, 180);
+        screen.onMessageReceived(modeMsg);
+        
+        // statusMessage 확인 (빈 문자열이어야 함)
+        Field statusField = P2PLobbyScreen.class.getDeclaredField("statusMessage");
+        statusField.setAccessible(true);
+        String status = (String) statusField.get(screen);
+        
+        assertEquals("", status, "초기 MODE_INFO 수신 시 메시지 표시 안 함");
+    }
+    
+    @Test
+    @DisplayName("두 번째 MODE_INFO 수신 시 모드 선택 메시지 표시")
+    void secondModeInfo_displaysMessage() throws Exception {
+        P2PLobbyScreen screen = new P2PLobbyScreen(app, settings);
+        screen.onShow();
+        
+        // 첫 번째 MODE_INFO
+        P2PMessage firstMsg = P2PMessage.modeInfo(se.tetris.team3.core.GameMode.BATTLE_NORMAL, 0);
+        screen.onMessageReceived(firstMsg);
+        
+        // 두 번째 MODE_INFO (실제 모드 변경)
+        P2PMessage secondMsg = P2PMessage.modeInfo(se.tetris.team3.core.GameMode.BATTLE_ITEM, 180);
+        screen.onMessageReceived(secondMsg);
+        
+        // statusMessage 확인
+        Field statusField = P2PLobbyScreen.class.getDeclaredField("statusMessage");
+        statusField.setAccessible(true);
+        String status = (String) statusField.get(screen);
+        
+        assertTrue(status.contains("모드를 선택했습니다"), "두 번째 MODE_INFO 수신 시 모드 선택 메시지 표시");
+    }
+
     // Helper method to get Phase enum value
     @SuppressWarnings({"unchecked", "rawtypes"})
     private Object getPhaseEnum(P2PLobbyScreen screen, String phaseName) throws Exception {
