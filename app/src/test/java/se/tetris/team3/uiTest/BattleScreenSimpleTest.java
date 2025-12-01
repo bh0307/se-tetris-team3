@@ -23,7 +23,7 @@ class BattleScreenSimpleTest {
     @BeforeEach
     void setUp() {
         app = Mockito.mock(AppFrame.class);
-        settings = Mockito.mock(Settings.class);
+        settings = new Settings();
         
         BufferedImage img = new BufferedImage(1200, 700, BufferedImage.TYPE_INT_ARGB);
         g2 = img.createGraphics();
@@ -31,8 +31,6 @@ class BattleScreenSimpleTest {
         when(app.getSettings()).thenReturn(settings);
         when(app.getWidth()).thenReturn(1200);
         when(app.getHeight()).thenReturn(700);
-        when(settings.resolveBlockSize()).thenReturn(30);
-        when(settings.isColorBlindMode()).thenReturn(false);
     }
 
     @AfterEach
@@ -48,28 +46,34 @@ class BattleScreenSimpleTest {
     @Test
     @DisplayName("BattleScreen 생성 - BATTLE_NORMAL 모드")
     void testConstructorNormalMode() {
-        assertDoesNotThrow(() -> {
+        try {
             screen = new BattleScreen(app, GameMode.BATTLE_NORMAL, settings, 0);
             assertNotNull(screen);
-        });
+        } catch (Exception e) {
+            fail("BattleScreen 생성 중 예외 발생: " + e.getMessage());
+        }
     }
 
     @Test
     @DisplayName("BattleScreen 생성 - BATTLE_ITEM 모드")
     void testConstructorItemMode() {
-        assertDoesNotThrow(() -> {
+        try {
             screen = new BattleScreen(app, GameMode.BATTLE_ITEM, settings, 0);
             assertNotNull(screen);
-        });
+        } catch (Exception e) {
+            fail("BattleScreen 생성 중 예외 발생: " + e.getMessage());
+        }
     }
 
     @Test
     @DisplayName("BattleScreen 생성 - BATTLE_TIME 모드")
     void testConstructorTimeMode() {
-        assertDoesNotThrow(() -> {
+        try {
             screen = new BattleScreen(app, GameMode.BATTLE_TIME, settings, 180);
             assertNotNull(screen);
-        });
+        } catch (Exception e) {
+            fail("BattleScreen 생성 중 예외 발생: " + e.getMessage());
+        }
     }
 
     @Test
@@ -99,7 +103,6 @@ class BattleScreenSimpleTest {
     void testSmallScreenSize() {
         when(app.getWidth()).thenReturn(600);
         when(app.getHeight()).thenReturn(400);
-        when(settings.resolveBlockSize()).thenReturn(15);
         
         assertDoesNotThrow(() -> {
             screen = new BattleScreen(app, GameMode.BATTLE_NORMAL, settings, 0);
@@ -112,7 +115,6 @@ class BattleScreenSimpleTest {
     void testLargeScreenSize() {
         when(app.getWidth()).thenReturn(1920);
         when(app.getHeight()).thenReturn(1080);
-        when(settings.resolveBlockSize()).thenReturn(50);
         
         assertDoesNotThrow(() -> {
             screen = new BattleScreen(app, GameMode.BATTLE_NORMAL, settings, 0);
@@ -123,7 +125,7 @@ class BattleScreenSimpleTest {
     @Test
     @DisplayName("색맹 모드에서 렌더링")
     void testColorBlindMode() {
-        when(settings.isColorBlindMode()).thenReturn(true);
+        settings.setColorBlindMode(true);
         
         screen = new BattleScreen(app, GameMode.BATTLE_NORMAL, settings, 0);
         assertDoesNotThrow(() -> screen.render(g2));
