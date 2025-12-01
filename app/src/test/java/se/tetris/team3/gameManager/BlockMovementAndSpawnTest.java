@@ -90,8 +90,10 @@ class BlockMovementAndSpawnTest {
             int[][] field = (int[][]) f.get(gm);
             int blockX = gm.getBlockX();
             int blockY = gm.getBlockY();
-            // 블록 바로 아래에 장애물 추가
-            field[blockY + 1][blockX] = 1;
+                // 블록 바로 아래 줄 전체에 장애물 추가
+                for (int x = 0; x < field[0].length; x++) {
+                    field[blockY + 1][x] = 1;
+                }
         } catch (Exception e) { throw new RuntimeException(e); }
         gm.stepDownOrFix();
         int yAfter = gm.getBlockY();
