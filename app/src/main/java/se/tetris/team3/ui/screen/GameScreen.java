@@ -136,6 +136,69 @@ public class GameScreen implements Screen {
         g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, aa);
     }
 
+    // 다음 순위까지 남은 점수 표시
+    private void drawNextRankInfo(Graphics2D g2) {
+        ScoreManager sm = new ScoreManager();
+        GameMode mode = manager.getMode();
+        int currentScore = manager.getScore();
+        
+        java.util.List<ScoreManager.ScoreEntry> highScores = sm.getHighScores(mode);
+        
+        String msg;
+        Color msgColor;
+        
+        if (highScores.isEmpty()) {
+            // 랭킹이 없으면 1등 되라고 표시
+            msg = "첫 기록을 세워보세요!";
+            msgColor = Color.YELLOW;
+        } else {
+            // 현재 점수가 랭킹에 들어갈 위치 찾기
+            int myRank = -1;
+            for (int i = 0; i < highScores.size(); i++) {
+                if (currentScore > highScores.get(i).getScore()) {
+                    myRank = i + 1; // 1등, 2등, 3등... (1-based)
+                    break;
+                }
+            }
+            
+            if (myRank == -1) {
+                // 현재 최하위보다 낮음
+                if (highScores.size() < 10) {
+                    // 10등 안에 들 수 있음
+                    int lastScore = highScores.get(highScores.size() - 1).getScore();
+                    int needed = lastScore - currentScore + 1;
+                    msg = String.format("%d점 더 얻으면 %d등!", needed, highScores.size() + 1);
+                } else {
+                    // 10등까지 다 찼고, 10등보다 낮음
+                    int tenthScore = highScores.get(9).getScore();
+                    int needed = tenthScore - currentScore + 1;
+                    msg = String.format("%d점 더 얻으면 10등!", needed);
+                }
+                msgColor = Color.CYAN;
+            } else if (myRank == 1) {
+                // 1등 중
+                msg = "현재 1등! 계속 유지하세요!";
+                msgColor = Color.YELLOW;
+            } else {
+                // 2등 이상
+                int prevScore = highScores.get(myRank - 2).getScore();
+                int needed = prevScore - currentScore + 1;
+                msg = String.format("%d점 더 얻으면 %d등!", needed, myRank - 1);
+                msgColor = Color.GREEN;
+            }
+        }
+        
+        // 게임판 아래에 표시 (padding + 20칸 높이 + 여유)
+        int blockSize = settings.resolveBlockSize();
+        int blockSizeH = (int)(blockSize * 1.15);
+        int yPos = 18 + blockSizeH * 20 + 30;
+        
+        g2.setColor(msgColor);
+        g2.setFont(new Font("SansSerif", Font.BOLD, 16));
+        int msgWidth = g2.getFontMetrics().stringWidth(msg);
+        g2.drawString(msg, (app.getWidth() - msgWidth) / 2, yPos);
+    }
+
     @Override
     public void render(Graphics2D g2) {
         int blockSize = settings.resolveBlockSize();
@@ -272,6 +335,9 @@ public class GameScreen implements Screen {
             int width = app.getWidth();
             manager.renderHUD(g2, padding, blockSize, width);
             manager.renderParticles(g2, padding, padding, blockSize);
+            
+            // 하단에 다음 순위까지 남은 점수 표시
+            drawNextRankInfo(g2);
         } else {
             // GAME OVER
             g2.setColor(Color.RED);

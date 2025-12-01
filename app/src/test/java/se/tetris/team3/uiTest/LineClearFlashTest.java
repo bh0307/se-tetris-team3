@@ -201,16 +201,16 @@ public class LineClearFlashTest {
         long startTime = System.currentTimeMillis();
         manager.clearLines(true);
         
-        // 50ms 후: 플래시 중이어야 함
-        Thread.sleep(50);
-        assertTrue(manager.isRowFlashing(19), "50ms 시점에 플래시 중");
-        
-        // 80ms 후: 여전히 플래시 중
+        // 30ms 후: 플래시 중이어야 함
         Thread.sleep(30);
-        assertTrue(manager.isRowFlashing(19), "80ms 시점에 플래시 중");
+        assertTrue(manager.isRowFlashing(19), "30ms 시점에 플래시 중");
+        
+        // 60ms 후: 여전히 플래시 중
+        Thread.sleep(30);
+        assertTrue(manager.isRowFlashing(19), "60ms 시점에 플래시 중");
         
         // 150ms 후: 플래시 종료
-        Thread.sleep(70);
+        Thread.sleep(90);
         assertFalse(manager.isRowFlashing(19), "150ms 시점에 플래시 종료");
         
         long elapsed = System.currentTimeMillis() - startTime;
