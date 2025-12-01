@@ -98,8 +98,8 @@ class GameManagerRenderTest {
                         int blockSize = 20;
                         int padding = 10;
                         int hudX = padding + blockSize * 10 + 16;
-                        int baseFontSize = Math.max(10, Math.min(18, Math.max(8, blockSize / 3)));
-                        int lineSpacing = (int)(baseFontSize * 1.4);
+                        int baseFontSize = Math.max(16, Math.min(28, Math.max(14, blockSize / 2)));
+                        int lineSpacing = (int)(baseFontSize * 1.5);
                         int scoreY = padding + lineSpacing;
                         int hudWidth = Math.max(120, 300 - hudX - padding);
                         // HUD 영역 내 여러 픽셀을 스캔하여 텍스트가 실제로 렌더링된 부분(흰색 또는 밝은 색상)이 있는지 확인
@@ -125,7 +125,7 @@ class GameManagerRenderTest {
                         slowEndField.setAccessible(true);
                         slowEndField.set(gm, System.currentTimeMillis() + 5000);
                         gm.renderHUD(g2, 10, 20, 300);
-                        int slowY = scoreY + 180;
+                        int slowY = scoreY + 200;
                         boolean foundSlowText = false;
                         for (int y = slowY - 2; y <= slowY + 2; y++) {
                             for (int x = hudX; x < hudX + hudWidth; x += 2) {
@@ -149,7 +149,7 @@ class GameManagerRenderTest {
                         iOnlyEndField.setAccessible(true);
                         iOnlyEndField.set(gm, System.currentTimeMillis() + 5000);
                         gm.renderHUD(g2, 10, 20, 300);
-                        int iOnlyY = slowField.getBoolean(gm) ? scoreY + 204 : scoreY + 180;
+                        int iOnlyY = slowField.getBoolean(gm) ? scoreY + 230 : scoreY + 200;
                         boolean foundIOnlyText = false;
                         for (int y = iOnlyY - 2; y <= iOnlyY + 2; y++) {
                             for (int x = hudX; x < hudX + hudWidth; x += 2) {
@@ -173,9 +173,9 @@ class GameManagerRenderTest {
                         doubleEndField.setAccessible(true);
                         doubleEndField.set(gm, System.currentTimeMillis() + 5000);
                         gm.renderHUD(g2, 10, 20, 300);
-                        int doubleY = scoreY + 180;
-                        if (slowField.getBoolean(gm)) doubleY += 24;
-                        if (iOnlyField.getBoolean(gm)) doubleY += 24;
+                        int doubleY = scoreY + 200;
+                        if (slowField.getBoolean(gm)) doubleY += 30;
+                        if (iOnlyField.getBoolean(gm)) doubleY += 30;
                         boolean foundDoubleText = false;
                         for (int y = doubleY - 2; y <= doubleY + 2; y++) {
                             for (int x = hudX; x < hudX + hudWidth; x += 2) {
