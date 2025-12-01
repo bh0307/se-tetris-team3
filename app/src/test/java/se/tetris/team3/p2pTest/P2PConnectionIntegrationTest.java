@@ -30,18 +30,27 @@ public class P2PConnectionIntegrationTest {
         P2PConnection server = new P2PConnection(null);
         P2PConnection client = new P2PConnection(null);
 
-        // 양측의 onConnected 호출을 기다리기 위한 래치
-        CountDownLatch connectedLatch = new CountDownLatch(2);
+        CountDownLatch serverReadyLatch = new CountDownLatch(1);
+        CountDownLatch serverConnectedLatch = new CountDownLatch(1);
+        CountDownLatch clientConnectedLatch = new CountDownLatch(1);
+        final int[] serverConnectCount = {0};
 
         server.setListener(new P2PConnectionListener() {
-            @Override public void onConnected(boolean asServer) { connectedLatch.countDown(); }
+            @Override public void onConnected(boolean asServer) {
+                serverConnectCount[0]++;
+                if (serverConnectCount[0] == 1) {
+                    serverReadyLatch.countDown();
+                } else {
+                    serverConnectedLatch.countDown();
+                }
+            }
             @Override public void onDisconnected(String reason) {}
             @Override public void onMessageReceived(se.tetris.team3.net.P2PMessage msg) {}
             @Override public void onNetworkError(Exception e) { fail("Server network error: " + e); }
         });
 
         client.setListener(new P2PConnectionListener() {
-            @Override public void onConnected(boolean asServer) { connectedLatch.countDown(); }
+            @Override public void onConnected(boolean asServer) { clientConnectedLatch.countDown(); }
             @Override public void onDisconnected(String reason) {}
             @Override public void onMessageReceived(se.tetris.team3.net.P2PMessage msg) {}
             @Override public void onNetworkError(Exception e) { fail("Client network error: " + e); }
@@ -49,16 +58,18 @@ public class P2PConnectionIntegrationTest {
 
         // 서버 바인딩(백그라운드 스레드 내부에서 accept 대기)
         server.startServer();
+        serverReadyLatch.await(2, TimeUnit.SECONDS);
 
         // 클라이언트에서 로컬호스트로 접속 시도
         client.connectTo("127.0.0.1");
 
-        // P2PConnection은 콜백을 EDT에 전달하므로, 최대 5초 기다리고 EDT를 플러시해서 invokeLater를 실행시킵니다.
-        boolean arrived = connectedLatch.await(5, TimeUnit.SECONDS);
+        // 양측 연결 완료 대기
+        boolean serverConnected = serverConnectedLatch.await(5, TimeUnit.SECONDS);
+        boolean clientConnected = clientConnectedLatch.await(5, TimeUnit.SECONDS);
 
         try { SwingUtilities.invokeAndWait(() -> {}); } catch (Exception ignore) {}
 
-        assertTrue(arrived, "서버와 클라이언트 모두 onConnected 콜백을 호출해야 합니다.");
+        assertTrue(serverConnected && clientConnected, "서버와 클라이언트 모두 onConnected 콜백을 호출해야 합니다.");
 
         // 정리
         try { client.close(); } catch (Exception ignore) {}
@@ -109,11 +120,14 @@ public class P2PConnectionIntegrationTest {
         P2PConnection server = new P2PConnection(null);
         P2PConnection client = new P2PConnection(null);
         
+        CountDownLatch serverReadyLatch = new CountDownLatch(1);
         CountDownLatch clientConnectedLatch = new CountDownLatch(1);
         AtomicBoolean clientServerFlag = new AtomicBoolean(true);
         
         server.setListener(new P2PConnectionListener() {
-            @Override public void onConnected(boolean asServer) {}
+            @Override public void onConnected(boolean asServer) {
+                serverReadyLatch.countDown();
+            }
             @Override public void onDisconnected(String reason) {}
             @Override public void onMessageReceived(P2PMessage msg) {}
             @Override public void onNetworkError(Exception e) {}
@@ -130,6 +144,9 @@ public class P2PConnectionIntegrationTest {
         });
         
         server.startServer();
+        // 서버가 대기 상태가 될 때까지 기다림
+        serverReadyLatch.await(2, TimeUnit.SECONDS);
+        
         client.connectTo("127.0.0.1");
         
         clientConnectedLatch.await(5, TimeUnit.SECONDS);
@@ -147,12 +164,22 @@ public class P2PConnectionIntegrationTest {
         P2PConnection server = new P2PConnection(null);
         P2PConnection client = new P2PConnection(null);
         
-        CountDownLatch connectedLatch = new CountDownLatch(2);
+        CountDownLatch serverReadyLatch = new CountDownLatch(1);
+        CountDownLatch serverConnectedLatch = new CountDownLatch(1);
+        CountDownLatch clientConnectedLatch = new CountDownLatch(1);
         CountDownLatch disconnectedLatch = new CountDownLatch(1);
         AtomicReference<String> disconnectReason = new AtomicReference<>();
+        final int[] serverConnectCount = {0};
         
         server.setListener(new P2PConnectionListener() {
-            @Override public void onConnected(boolean asServer) { connectedLatch.countDown(); }
+            @Override public void onConnected(boolean asServer) {
+                serverConnectCount[0]++;
+                if (serverConnectCount[0] == 1) {
+                    serverReadyLatch.countDown();
+                } else {
+                    serverConnectedLatch.countDown();
+                }
+            }
             @Override public void onDisconnected(String reason) {
                 disconnectReason.set(reason);
                 disconnectedLatch.countDown();
@@ -162,16 +189,19 @@ public class P2PConnectionIntegrationTest {
         });
         
         client.setListener(new P2PConnectionListener() {
-            @Override public void onConnected(boolean asServer) { connectedLatch.countDown(); }
+            @Override public void onConnected(boolean asServer) { clientConnectedLatch.countDown(); }
             @Override public void onDisconnected(String reason) {}
             @Override public void onMessageReceived(P2PMessage msg) {}
             @Override public void onNetworkError(Exception e) {}
         });
         
         server.startServer();
+        serverReadyLatch.await(2, TimeUnit.SECONDS);
+        
         client.connectTo("127.0.0.1");
         
-        connectedLatch.await(5, TimeUnit.SECONDS);
+        serverConnectedLatch.await(5, TimeUnit.SECONDS);
+        clientConnectedLatch.await(5, TimeUnit.SECONDS);
         try { SwingUtilities.invokeAndWait(() -> {}); } catch (Exception ignore) {}
         
         // 클라이언트 종료
