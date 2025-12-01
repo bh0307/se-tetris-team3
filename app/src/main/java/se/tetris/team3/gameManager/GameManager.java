@@ -726,13 +726,13 @@ public class GameManager {
         int perLevelDecrease;
         switch (difficulty) {
             case EASY:
-                perLevelDecrease = 160; // 20% 덜 증가
+                perLevelDecrease = 100; // 레벨당 100ms 감소
                 break;
             case HARD:
-                perLevelDecrease = 240; // 20% 더 증가
+                perLevelDecrease = 150; // 레벨당 150ms 감소
                 break;
             default:
-                perLevelDecrease = 200; // NORMAL
+                perLevelDecrease = 120; // NORMAL - 레벨당 120ms 감소
                 break;
         }
         int delay = Math.max(50, base - (lvl - 1) * perLevelDecrease);
@@ -889,14 +889,14 @@ public void renderHUD(Graphics2D g2, int padding, int blockSize, int totalWidth)
     if (slowModeActive) {
         g2.setColor(Color.RED);
         int remaining = getSlowModeRemainingTime();
-        drawStringEllipsis(g2, "SLOW: " + remaining + "s", hudX, scoreY + 180, hudWidth - 8);
+        drawStringEllipsis(g2, "SLOW: " + remaining + "s", hudX, scoreY + 200, hudWidth - 8);
     }
     
     // I-only 모드 남은 시간 표시
     if (iOnlyModeActive) {
         long rem = Math.max(0, iOnlyModeEndMillis - System.currentTimeMillis());
         String remS = String.format("I-MODE: %ds", (rem + 999) / 1000);
-        int yPos = slowModeActive ? scoreY + 204 : scoreY + 180; // SLOW MODE 있으면 그 아래, 없으면 같은 위치
+        int yPos = slowModeActive ? scoreY + 230 : scoreY + 200; // SLOW MODE 있으면 그 아래, 없으면 같은 위치
         g2.setColor(Color.GREEN);
         drawStringEllipsis(g2, remS, hudX, yPos, hudWidth - 8);
     }
@@ -906,11 +906,11 @@ public void renderHUD(Graphics2D g2, int padding, int blockSize, int totalWidth)
     if (doubleScoreActive) {
         int remain = (int) Math.ceil((doubleScoreTime - System.currentTimeMillis()) / 1000.0);
         // 기본 기준 위치는 SLOW와 동일
-        int yPos = scoreY + 180;
+        int yPos = scoreY + 200;
         // SLOW가 보이면 그 아래
-        if (slowModeActive) yPos += 24;
+        if (slowModeActive) yPos += 30;
         // I-MODE가 보이면 그 아래 (SLOW가 없더라도, I-MODE가 있으면 한 칸 아래)
-        if (iOnlyModeActive) yPos += 24;
+        if (iOnlyModeActive) yPos += 30;
 
         g2.setColor(Color.BLUE);
         String text = "2x SCORE: " + Math.max(0, remain) + "s";
