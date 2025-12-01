@@ -45,6 +45,17 @@ public final class PatternPainter {
         fillRoundedWithTexture(g2, x, y, size, tp, baseColor.darker());
     }
 
+    /** 가로/세로 크기가 다른 직사각형 셀 그리기 */
+    public static void drawCellRect(Graphics2D g2, int x, int y, int width, int height,
+                                    Color baseColor, Block block, boolean colorBlindMode) {
+        if (!colorBlindMode) {
+            fillRoundedRect(g2, x, y, width, height, baseColor);
+            return;
+        }
+        TexturePaint tp = hatchForKeyWithAlpha(block != null ? block.getClass().getSimpleName() : "default", 255);
+        fillRoundedRectWithTexture(g2, x, y, width, height, tp, baseColor.darker());
+    }
+
     /** block이 없이 부르는 코드와도 호환 (임의 공용 패턴 지정) */
     public static void drawCell(Graphics2D g2, int x, int y, int size,
                                 Color baseColor, boolean colorBlindMode) {
@@ -118,12 +129,33 @@ public final class PatternPainter {
         g2.draw(cell);
     }
 
+    private static void fillRoundedRect(Graphics2D g2, int x, int y, int width, int height, Color c) {
+        int arc = Math.max(4, Math.round(width * 0.2f));
+        Shape cell = new RoundRectangle2D.Float(x, y, width, height, arc, arc);
+        g2.setColor(c);
+        g2.fill(cell);
+        g2.setColor(c.darker());
+        g2.draw(cell);
+    }
+
     private static void fillRoundedWithTexture(Graphics2D g2, int x, int y, int size,
                                                TexturePaint tp, Color border) {
         int arc = Math.max(4, Math.round(size * 0.2f));
         Shape cell = new RoundRectangle2D.Float(x, y, size, size, arc, arc);
         Paint old = g2.getPaint();
         g2.setPaint(tp);          // (0,0) 앵커 고정된 TexturePaint
+        g2.fill(cell);
+        g2.setPaint(old);
+        g2.setColor(border);
+        g2.draw(cell);
+    }
+
+    private static void fillRoundedRectWithTexture(Graphics2D g2, int x, int y, int width, int height,
+                                                   TexturePaint tp, Color border) {
+        int arc = Math.max(4, Math.round(width * 0.2f));
+        Shape cell = new RoundRectangle2D.Float(x, y, width, height, arc, arc);
+        Paint old = g2.getPaint();
+        g2.setPaint(tp);
         g2.fill(cell);
         g2.setPaint(old);
         g2.setColor(border);
