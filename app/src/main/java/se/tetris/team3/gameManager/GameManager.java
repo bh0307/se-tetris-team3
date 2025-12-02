@@ -444,10 +444,12 @@ public class GameManager {
     for (int y = row; y > 0; y--) {
         System.arraycopy(field[y - 1], 0, field[y], 0, FIELD_WIDTH);
         System.arraycopy(itemField[y - 1], 0, itemField[y], 0, FIELD_WIDTH);
+        System.arraycopy(colorField[y - 1], 0, colorField[y], 0, FIELD_WIDTH);
     }
     for (int x = 0; x < FIELD_WIDTH; x++) {
         field[0][x] = 0;
         itemField[0][x] = 0;
+        colorField[0][x] = null;
     }
 }
 

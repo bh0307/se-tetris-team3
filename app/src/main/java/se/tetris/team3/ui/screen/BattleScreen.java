@@ -184,14 +184,13 @@ public class BattleScreen implements Screen {
 
         calculateLayout(width, height);
 
-        // 배경
-        g2.setColor(Color.BLACK);
-        g2.fillRect(0, 0, width, height);
+        // 배틀 전용 배경
+        drawBattleBackground(g2, width, height);
 
         int nextBoxWidth = (int) (blockSize * 3.5);
         int playerAreaWidth = boardWidth + nextBoxWidth;
         int totalWidth = playerAreaWidth + centerGap + playerAreaWidth;
-        int startX = (width - totalWidth) / 2;
+        int startX = (width - totalWidth) / 2 - 20; // 왼쪽으로 20픽셀 이동
 
         int leftBoardX = startX;
         int rightBoardX = startX + playerAreaWidth + centerGap;
@@ -570,5 +569,64 @@ public class BattleScreen implements Screen {
             int mtw = g2.getFontMetrics().stringWidth(menuText);
             g2.drawString(menuText, centerX - mtw / 2, centerY + 60);
         }
+    }
+    
+    /**
+     * 대전 모드 전용 배경 - 격렬한 전투 느낌
+     */
+    private void drawBattleBackground(Graphics2D g2, int width, int height) {
+        // 어두운 빨강-검정 그라데이션 (전장 느낌)
+        java.awt.GradientPaint gradient = new java.awt.GradientPaint(
+            0, 0, new Color(40, 0, 0),
+            0, height, new Color(0, 0, 0)
+        );
+        g2.setPaint(gradient);
+        g2.fillRect(0, 0, width, height);
+        
+        // 대각선 경고 스트라이프 (공사장/위험 느낌)
+        g2.setColor(new Color(255, 100, 0, 40)); // 주황색 반투명
+        for (int i = -height; i < width + height; i += 80) {
+            int[] xPoints = {i, i + 40, i + 40 + height, i + height};
+            int[] yPoints = {0, 0, height, height};
+            g2.fillPolygon(xPoints, yPoints, 4);
+        }
+        
+        // 중앙 VS 라인 (양쪽 대결 강조)
+        int centerX = width / 2;
+        g2.setColor(new Color(255, 0, 0, 100));
+        g2.setStroke(new java.awt.BasicStroke(4));
+        g2.drawLine(centerX, 0, centerX, height);
+        
+        // 번개 효과 라인 (좌우 대각선)
+        g2.setColor(new Color(255, 255, 0, 60)); // 노란색 번개
+        g2.setStroke(new java.awt.BasicStroke(3));
+        java.util.Random rand = new java.util.Random(System.currentTimeMillis() / 500); // 느린 애니메이션
+        for (int i = 0; i < 3; i++) {
+            int startX = rand.nextInt(width / 4);
+            int endX = width / 4 + rand.nextInt(width / 4);
+            int y = rand.nextInt(height);
+            g2.drawLine(startX, y, endX, y + 50);
+            
+            startX = width - rand.nextInt(width / 4);
+            endX = width - (width / 4 + rand.nextInt(width / 4));
+            y = rand.nextInt(height);
+            g2.drawLine(startX, y, endX, y + 50);
+        }
+        
+        // 폭발 파티클 효과 (배경에 흩어진 점들)
+        g2.setColor(new Color(255, 150, 0, 150)); // 주황색 불꽃
+        rand = new java.util.Random(42); // 고정 패턴
+        for (int i = 0; i < 40; i++) {
+            int x = rand.nextInt(width);
+            int y = rand.nextInt(height);
+            int size = rand.nextInt(4) + 2;
+            g2.fillOval(x, y, size, size);
+        }
+        
+        // 붉은 섬광 (상단)
+        g2.setColor(new Color(255, 0, 0, 30));
+        g2.fillRect(0, 0, width, height / 4);
+        
+        g2.setStroke(new java.awt.BasicStroke(1));
     }
 }

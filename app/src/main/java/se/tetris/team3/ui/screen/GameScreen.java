@@ -136,6 +136,100 @@ public class GameScreen implements Screen {
         g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, aa);
     }
 
+    // 클래식 아케이드 스타일 배경
+    private void drawClassicBackground(Graphics2D g2) {
+        int width = app.getWidth();
+        int height = app.getHeight();
+        
+        // 진한 보라-파랑 그라데이션 배경
+        GradientPaint gradient = new GradientPaint(
+            0, 0, new Color(25, 0, 51),
+            0, height, new Color(0, 20, 80)
+        );
+        g2.setPaint(gradient);
+        g2.fillRect(0, 0, width, height);
+        
+        // 큰 별들 (반짝임 효과)
+        java.util.Random rand = new java.util.Random(42);
+        for (int i = 0; i < 30; i++) {
+            int x = rand.nextInt(width);
+            int y = rand.nextInt(height);
+            int size = rand.nextInt(3) + 3; // 3-5픽셀
+            
+            // 별 중심 (밝은 노란색)
+            g2.setColor(new Color(255, 255, 200, 220));
+            g2.fillOval(x - size/2, y - size/2, size, size);
+            
+            // 반짝임 효과 (주변에 하얀 빛)
+            g2.setColor(new Color(255, 255, 255, 100));
+            g2.fillOval(x - size, y - size, size * 2, size * 2);
+        }
+        
+        // 작은 별들
+        for (int i = 0; i < 80; i++) {
+            int x = rand.nextInt(width);
+            int y = rand.nextInt(height);
+            g2.setColor(new Color(255, 255, 255, 180));
+            g2.fillRect(x, y, 2, 2);
+        }
+        
+        // 네온 스트라이프 패턴 (좌우 양쪽)
+        g2.setColor(new Color(255, 0, 150, 30));
+        for (int i = 0; i < height; i += 40) {
+            g2.fillRect(0, i, 30, 20);
+            g2.fillRect(width - 30, i + 20, 30, 20);
+        }
+        
+        // 분홍-파랑 네온 라인
+        g2.setColor(new Color(0, 255, 255, 50));
+        g2.setStroke(new BasicStroke(3));
+        for (int i = 0; i < 5; i++) {
+            int y = rand.nextInt(height);
+            g2.drawLine(0, y, width, y);
+        }
+        g2.setStroke(new BasicStroke(1));
+    }
+    
+    // 클래식 아케이드 스타일 게임판
+    private void drawClassicBoard(Graphics2D g2, int padding, int blockSize, int blockSizeH) {
+        int boardWidth = blockSize * 10;
+        int boardHeight = blockSizeH * 20;
+        
+        // 게임판 내부 어두운 배경
+        g2.setColor(new Color(0, 0, 30));
+        g2.fillRect(padding, padding, boardWidth, boardHeight);
+        
+        // 장식적인 테두리 (여러겹)
+        // 바깥쪽 금색 테두리
+        g2.setColor(new Color(255, 215, 0));
+        g2.setStroke(new BasicStroke(4));
+        g2.drawRect(padding - 8, padding - 8, boardWidth + 16, boardHeight + 16);
+        
+        // 중간 빨간색 테두리
+        g2.setColor(new Color(220, 20, 60));
+        g2.setStroke(new BasicStroke(3));
+        g2.drawRect(padding - 4, padding - 4, boardWidth + 8, boardHeight + 8);
+        
+        // 안쪽 흰색 테두리
+        g2.setColor(Color.WHITE);
+        g2.setStroke(new BasicStroke(2));
+        g2.drawRect(padding, padding, boardWidth, boardHeight);
+        
+        // 그리드 라인 (연한 파란색)
+        g2.setColor(new Color(70, 130, 180, 30));
+        g2.setStroke(new BasicStroke(1));
+        for (int i = 1; i < 10; i++) {
+            int x = padding + i * blockSize;
+            g2.drawLine(x, padding, x, padding + boardHeight);
+        }
+        for (int i = 1; i < 20; i++) {
+            int y = padding + i * blockSizeH;
+            g2.drawLine(padding, y, padding + boardWidth, y);
+        }
+        
+        g2.setStroke(new BasicStroke(1));
+    }
+    
     // 다음 순위까지 남은 점수 표시
     private void drawNextRankInfo(Graphics2D g2) {
         ScoreManager sm = new ScoreManager();
@@ -145,12 +239,16 @@ public class GameScreen implements Screen {
         java.util.List<ScoreManager.ScoreEntry> highScores = sm.getHighScores(mode);
         
         String msg;
-        Color msgColor;
+        Color bgColor;
+        Color textColor;
+        String icon;
         
         if (highScores.isEmpty()) {
             // 랭킹이 없으면 1등 되라고 표시
             msg = "첫 기록을 세워보세요!";
-            msgColor = Color.YELLOW;
+            bgColor = new Color(255, 215, 0, 200); // 금색 배경
+            textColor = new Color(139, 69, 19); // 갈색 텍스트
+            icon = "★";
         } else {
             // 현재 점수가 랭킹에 들어갈 위치 찾기
             int myRank = -1;
@@ -167,36 +265,65 @@ public class GameScreen implements Screen {
                     // 10등 안에 들 수 있음
                     int lastScore = highScores.get(highScores.size() - 1).getScore();
                     int needed = lastScore - currentScore + 1;
-                    msg = String.format("%d점 더 얻으면 %d등!", needed, highScores.size() + 1);
+                    msg = String.format("%,d점 더 얻으면 %d등!", needed, highScores.size() + 1);
                 } else {
                     // 10등까지 다 찼고, 10등보다 낮음
                     int tenthScore = highScores.get(9).getScore();
                     int needed = tenthScore - currentScore + 1;
-                    msg = String.format("%d점 더 얻으면 10등!", needed);
+                    msg = String.format("%,d점 더 얻으면 10등!", needed);
                 }
-                msgColor = Color.CYAN;
+                bgColor = new Color(100, 149, 237, 200); // 하늘색 배경
+                textColor = Color.WHITE;
+                icon = "↑";
             } else if (myRank == 1) {
                 // 1등 중
                 msg = "현재 1등! 계속 유지하세요!";
-                msgColor = Color.YELLOW;
+                bgColor = new Color(255, 215, 0, 200); // 금색 배경
+                textColor = new Color(139, 69, 19); // 갈색 텍스트
+                icon = "👑";
             } else {
                 // 2등 이상
                 int prevScore = highScores.get(myRank - 2).getScore();
                 int needed = prevScore - currentScore + 1;
-                msg = String.format("%d점 더 얻으면 %d등!", needed, myRank - 1);
-                msgColor = Color.GREEN;
+                msg = String.format("%,d점 더 얻으면 %d등!", needed, myRank - 1);
+                bgColor = new Color(50, 205, 50, 200); // 초록색 배경
+                textColor = Color.WHITE;
+                icon = "▲";
             }
         }
         
-        // 게임판 아래에 표시 (padding + 20칸 높이 + 여유)
+        // 게임판 바로 아래에 표시
         int blockSize = settings.resolveBlockSize();
         int blockSizeH = (int)(blockSize * 1.15);
-        int yPos = 18 + blockSizeH * 20 + 30;
+        int padding = 18;
+        int yPos = padding + blockSizeH * 20 + 10; // padding + 게임판 높이 + 10px
         
-        g2.setColor(msgColor);
+        // 배경 박스 그리기
         g2.setFont(new Font("SansSerif", Font.BOLD, 16));
         int msgWidth = g2.getFontMetrics().stringWidth(msg);
-        g2.drawString(msg, (app.getWidth() - msgWidth) / 2, yPos);
+        int iconWidth = g2.getFontMetrics().stringWidth(icon + " ");
+        int totalWidth = iconWidth + msgWidth + 18; // 여백 포함
+        int boxHeight = 28;
+        int xPos = padding + blockSize * 10 + 10; // 게임판 오른쪽 끝 + 10px
+        
+        // 그림자 효과
+        g2.setColor(new Color(0, 0, 0, 100));
+        g2.fillRoundRect(xPos + 3, yPos - 20 + 3, totalWidth, boxHeight, 15, 15);
+        
+        // 배경 박스
+        g2.setColor(bgColor);
+        g2.fillRoundRect(xPos, yPos - 20, totalWidth, boxHeight, 15, 15);
+        
+        // 테두리
+        g2.setColor(new Color(255, 255, 255, 150));
+        g2.setStroke(new java.awt.BasicStroke(2));
+        g2.drawRoundRect(xPos, yPos - 20, totalWidth, boxHeight, 15, 15);
+        g2.setStroke(new java.awt.BasicStroke(1));
+        
+        // 아이콘과 텍스트
+        g2.setColor(textColor);
+        g2.drawString(icon, xPos + 10, yPos);
+        g2.drawString(msg, xPos + 10 + iconWidth, yPos);
     }
 
     @Override
@@ -205,8 +332,13 @@ public class GameScreen implements Screen {
         int blockSizeH = (int)(blockSize * 1.15); // 세로 길이 15% 증가
         int padding = 18;
 
-        g2.setColor(Color.BLACK);
-        g2.fillRect(0, 0, app.getWidth(), app.getHeight());
+        // 클래식 모드면 아케이드 스타일 배경, 아니면 검정색
+        if (manager.getMode() == GameMode.CLASSIC || manager.getMode() == GameMode.ITEM) {
+            drawClassicBackground(g2);
+        } else {
+            g2.setColor(Color.BLACK);
+            g2.fillRect(0, 0, app.getWidth(), app.getHeight());
+        }
 
         if (isPaused) {
             int width = app.getWidth(), height = app.getHeight();
@@ -229,10 +361,15 @@ public class GameScreen implements Screen {
             return;
         }
 
-        g2.setColor(Color.WHITE);
-        g2.setStroke(new BasicStroke(3));
-        g2.drawRect(padding, padding, blockSize * 10, blockSizeH * 20);
-        g2.setStroke(new BasicStroke(1));
+        // 클래식 모드면 아케이드 스타일 보드, 아니면 기본 테두리
+        if (manager.getMode() == GameMode.CLASSIC || manager.getMode() == GameMode.ITEM) {
+            drawClassicBoard(g2, padding, blockSize, blockSizeH);
+        } else {
+            g2.setColor(Color.WHITE);
+            g2.setStroke(new BasicStroke(3));
+            g2.drawRect(padding, padding, blockSize * 10, blockSizeH * 20);
+            g2.setStroke(new BasicStroke(1));
+        }
 
         alignSpawnIfNewBlock();
 
