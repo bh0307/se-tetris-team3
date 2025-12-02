@@ -27,6 +27,7 @@ public class P2PConnection implements Closeable {
     private ObjectInputStream in;
 
     private long lastReceiveTime;
+    private String cachedLocalAddress; // 연결 후 IP 주소 캐싱
 
     private volatile boolean idleTimeoutEnabled = true; //기본: 켜짐
 
@@ -51,6 +52,10 @@ public class P2PConnection implements Closeable {
     }
 
     public String getLocalAddress() {
+        // 캐싱된 주소가 있으면 반환 (연결 끊긴 후에도 유지)
+        if (cachedLocalAddress != null) {
+            return cachedLocalAddress;
+        }
         if (socket != null && socket.isConnected()) {
             return socket.getLocalAddress().getHostAddress() + ":" + socket.getLocalPort();
         }
@@ -116,6 +121,8 @@ public class P2PConnection implements Closeable {
         in = new ObjectInputStream(socket.getInputStream());
         running = true;
         lastReceiveTime = System.currentTimeMillis();
+        // IP 주소 캐싱
+        cachedLocalAddress = socket.getLocalAddress().getHostAddress() + ":" + socket.getLocalPort();
     }
 
     public synchronized void send(P2PMessage msg) {
@@ -155,7 +162,17 @@ public class P2PConnection implements Closeable {
                     }
                 }
             } catch (Exception e) {
-                deliverNetworkError(e);
+                // EOFException은 상대방이 정상 종료한 것
+                if (e instanceof java.io.EOFException || 
+                    e instanceof java.net.SocketException) {
+                    deliverDisconnected("상대방이 연결을 종료했습니다. 연결을 종료해주세요.");
+                } else if (running) {
+                    // 그 외 예외는 실제 네트워크 오류
+                    deliverNetworkError(e);
+                } else {
+                    // 이미 종료 중인 경우
+                    deliverDisconnected("연결이 종료되었습니다");
+                }
             } finally {
                 closeSilently();
             }

@@ -462,8 +462,8 @@ public class GameManager {
         if (row < 0 || row >= FIELD_HEIGHT) return;
 
         clearRow(row);
-        //score += 100;
-        score += getScoreWithMultiplier(100);
+        // 아이템으로 인해 삭제되는 줄에 대해서도 기존 방식대로 점수 계산 (1줄 * 100 * scoreMultiplier)
+        score += getScoreWithMultiplier(Math.round(1 * 100 * scoreMultiplier));
         // System.out.println(getScoreWithMultiplier(100)); 검증용
 
         linesClearedTotal++;

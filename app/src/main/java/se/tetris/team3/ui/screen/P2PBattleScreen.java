@@ -50,6 +50,7 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
     private final boolean isTimeAttack;
     private final long timeLimitMillis;
     private long startTime;
+    private long pauseStartTime; // 일시정지 시작 시간
 
     private boolean gameOver = false;
     private int winner = 0; // 0: 진행/무승부, 1: 내 승, 2: 상대 승
@@ -316,6 +317,25 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
             case PAUSE_STATE: 
                 // 상대가 P 눌러서 보낸 상태에 맞춰서 나도 같이 멈추거나 풀기
                 this.paused = msg.paused;
+                
+                // 타이머 제어
+                if (this.paused) {
+                    if (gameTimer != null) gameTimer.stop();
+                    if (dropTimer != null) dropTimer.stop();
+                    // 일시정지 시작 시간 기록
+                    if (isTimeAttack) {
+                        pauseStartTime = System.currentTimeMillis();
+                    }
+                } else {
+                    if (gameTimer != null) gameTimer.start();
+                    if (dropTimer != null) dropTimer.start();
+                    // 일시정지 해제 시 시작 시간 조정 (일시정지한 시간만큼 미래로 이동)
+                    if (isTimeAttack) {
+                        long pauseDuration = System.currentTimeMillis() - pauseStartTime;
+                        startTime += pauseDuration;
+                    }
+                }
+                
                 if (connection != null) {
                     connection.setIdleTimeoutEnabled(!this.paused);
                 }
@@ -478,6 +498,24 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
         if (key == KeyEvent.VK_P && !gameOver) {
             // 내 일시정지 토글
             paused = !paused;
+
+            // 타이머 제어
+            if (paused) {
+                if (gameTimer != null) gameTimer.stop();
+                if (dropTimer != null) dropTimer.stop();
+                // 일시정지 시작 시간 기록
+                if (isTimeAttack) {
+                    pauseStartTime = System.currentTimeMillis();
+                }
+            } else {
+                if (gameTimer != null) gameTimer.start();
+                if (dropTimer != null) dropTimer.start();
+                // 일시정지 해제 시 시작 시간 조정 (일시정지한 시간만큼 미래로 이동)
+                if (isTimeAttack) {
+                    long pauseDuration = System.currentTimeMillis() - pauseStartTime;
+                    startTime += pauseDuration;
+                }
+            }
 
             // 네트워크로 일시정지 상태 전파
             if (connection != null) {
