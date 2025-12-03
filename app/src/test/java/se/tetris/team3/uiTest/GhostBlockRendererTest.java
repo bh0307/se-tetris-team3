@@ -10,7 +10,6 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import se.tetris.team3.core.Settings;
 import se.tetris.team3.ui.render.GhostBlockRenderer;
-import se.tetris.team3.ui.render.GhostBlockRenderer.FieldValueProvider;
 
 class GhostBlockRendererTest {
     @Test
