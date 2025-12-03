@@ -64,6 +64,10 @@ public class MenuScreen implements Screen {
         }));
 
         items.add(new MenuItem("대전 모드", () -> app.showScreen(new BattleModeSelectScreen(app, app.getSettings()))));
+        items.add(new MenuItem("AI 대전", () -> {
+            // AI 모드로 바로 시작 (일반 대전)
+            app.showScreen(new BattleScreen(app, GameMode.BATTLE_NORMAL, app.getSettings(), 0, true));
+        }));
         items.add(new MenuItem("P2P 대전 모드", () ->app.showScreen(new P2PLobbyScreen(app, app.getSettings()))));
 
         items.add(new MenuItem("설정", () -> app.showScreen(new SettingsScreen(app))));
@@ -341,6 +345,9 @@ public class MenuScreen implements Screen {
     
     //필요시 포커스 관련 처리 추가 가능
     @Override public void onShow() {
+        // 배경 음악 재생
+        app.getAudioManager().playMenuMusic();
+        
         // 배경 애니메이션 타이머 시작
         animationTimer = new Timer(30, e -> {
             updateFallingBlocks();

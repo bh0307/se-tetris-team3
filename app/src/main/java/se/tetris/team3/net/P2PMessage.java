@@ -27,7 +27,8 @@ public class P2PMessage implements Serializable {
         LAG_WARNING,    // 랙 경고 메시지
         ERROR,          // 오류 메시지
         DISCONNECT,     // 연결 종료
-        PAUSE_STATE     // 일시정지 상태
+        PAUSE_STATE,     // 일시정지 상태
+        CHAT;            // 채팅
     }
 
     public Type type;
@@ -155,6 +156,14 @@ public class P2PMessage implements Serializable {
         P2PMessage m = new P2PMessage();
         m.type = Type.STATE;
         // field, shapes 등이 null인 빈 상태 전송
+        return m;
+    }
+
+    // P2P 채팅 메세지 생성
+    public static P2PMessage chat(String text) {
+        P2PMessage m = new P2PMessage();
+        m.type = Type.CHAT;
+        m.text = text;
         return m;
     }
 

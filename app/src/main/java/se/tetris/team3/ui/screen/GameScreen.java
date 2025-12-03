@@ -39,6 +39,9 @@ public class GameScreen implements Screen {
     }
 
     @Override public void onShow() {
+    // 배경 음악 재생
+    app.getAudioManager().playGameMusic();
+    
     // 게임 로직 타이머
     timer = new Timer(1000, new ActionListener() {
         @Override public void actionPerformed(ActionEvent e) {
