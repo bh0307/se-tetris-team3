@@ -1,7 +1,7 @@
 package se.tetris.team3.ai;
 
 import se.tetris.team3.blocks.Block;
-import se.tetris.team3.ui.GameManager;
+import se.tetris.team3.gameManager.GameManager;
 
 /**
  * 컴퓨터 플레이어 AI
@@ -485,5 +485,33 @@ public class AIPlayer {
         targetRotation = 0;
         currentRotationCount = 0;
         lastBlock = null;
+    }
+    
+    /**
+     * AI가 한 번의 동작을 수행 (BattleScreen에서 호출)
+     */
+    public void makeMove() {
+        AIAction action = getNextAction();
+        switch (action) {
+            case MOVE_LEFT:
+                gameManager.tryMove(gameManager.getBlockX() - 1, gameManager.getBlockY());
+                break;
+            case MOVE_RIGHT:
+                gameManager.tryMove(gameManager.getBlockX() + 1, gameManager.getBlockY());
+                break;
+            case ROTATE:
+                gameManager.rotateBlock();
+                break;
+            case HARD_DROP:
+                gameManager.hardDrop();
+                break;
+            case SOFT_DROP:
+                gameManager.stepDownOrFix();
+                break;
+            case NONE:
+            default:
+                // 아무것도 하지 않음
+                break;
+        }
     }
 }

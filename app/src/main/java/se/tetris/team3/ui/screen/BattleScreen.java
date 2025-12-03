@@ -8,13 +8,13 @@ import java.awt.event.KeyEvent;
 
 import javax.swing.Timer;
 
+import se.tetris.team3.ai.AIPlayer;
 import se.tetris.team3.blocks.Block;
 import se.tetris.team3.core.GameMode;
 import se.tetris.team3.core.Settings;
 import se.tetris.team3.gameManager.BattleGameManager;
 import se.tetris.team3.gameManager.GameManager;
 import se.tetris.team3.ui.AppFrame;
-import se.tetris.team3.ui.render.PatternPainter;
 
 /**
  * 2인 대전 모드 화면
@@ -46,6 +46,10 @@ public class BattleScreen implements Screen {
     private long player2LastDrop;
 
     private boolean paused = false;
+    
+    // AI 모드 관련
+    private final boolean isAIMode;
+    private AIPlayer aiPlayer;
 
     /**
      * BattleScreen 생성자
@@ -53,11 +57,17 @@ public class BattleScreen implements Screen {
      * @param mode         대전 모드 (BATTLE_NORMAL, BATTLE_ITEM, BATTLE_TIME)
      * @param settings     게임 설정
      * @param timeLimitSeconds 시간제한 모드일 경우 제한 시간(초), 아니면 0
+     * @param isAIMode     Player2를 AI로 설정할지 여부
      */
-    public BattleScreen(AppFrame frame, GameMode mode, Settings settings, int timeLimitSeconds) {
+    public BattleScreen(AppFrame frame, GameMode mode, Settings settings, int timeLimitSeconds, boolean isAIMode) {
         this.frame = frame;
         this.settings = settings;
+        this.isAIMode = isAIMode;
         this.battleManager = new BattleGameManager(mode, settings, timeLimitSeconds);
+
+        if (isAIMode) {
+            this.aiPlayer = new AIPlayer(battleManager.getPlayer2Manager());
+        }
 
         player1LastDrop = System.currentTimeMillis();
         player2LastDrop = System.currentTimeMillis();
@@ -65,6 +75,12 @@ public class BattleScreen implements Screen {
 
     @Override
     public void onShow() {
+        // 게임 시작
+        battleManager.start();
+        
+        // 배경 음악 재생
+        frame.getAudioManager().playBattleMusic();
+        
         // 게임 로직 업데이트(60fps 정도)
         gameTimer = new Timer(16, evt -> {
             if (!paused) {
@@ -87,9 +103,13 @@ public class BattleScreen implements Screen {
                     p1.stepDownOrFix();
                     player1LastDrop = now;
                 }
-                // Player2 낙하
+                // Player2 낙하 (AI 모드면 AI가 조작)
                 if (now - player2LastDrop >= p2.getGameTimerDelay()) {
-                    p2.stepDownOrFix();
+                    if (isAIMode && aiPlayer != null) {
+                        aiPlayer.makeMove();
+                    } else {
+                        p2.stepDownOrFix();
+                    }
                     player2LastDrop = now;
                 }
             }
@@ -149,23 +169,27 @@ public class BattleScreen implements Screen {
                 player1LastDrop = System.currentTimeMillis();
                 break;
 
-            // Player2: WASD
+            // Player2: WASD (AI 모드면 무시)
             case KeyEvent.VK_A:
-                p2.tryMove(p2.getBlockX() - 1, p2.getBlockY());
+                if (!isAIMode) p2.tryMove(p2.getBlockX() - 1, p2.getBlockY());
                 break;
             case KeyEvent.VK_D:
-                p2.tryMove(p2.getBlockX() + 1, p2.getBlockY());
+                if (!isAIMode) p2.tryMove(p2.getBlockX() + 1, p2.getBlockY());
                 break;
             case KeyEvent.VK_S:
-                p2.stepDownOrFix();
-                player2LastDrop = System.currentTimeMillis();
+                if (!isAIMode) {
+                    p2.stepDownOrFix();
+                    player2LastDrop = System.currentTimeMillis();
+                }
                 break;
             case KeyEvent.VK_W:
-                p2.rotateBlock();
+                if (!isAIMode) p2.rotateBlock();
                 break;
             case KeyEvent.VK_ENTER:
-                p2.hardDrop();
-                player2LastDrop = System.currentTimeMillis();
+                if (!isAIMode) {
+                    p2.hardDrop();
+                    player2LastDrop = System.currentTimeMillis();
+                }
                 break;
 
             // ESC: 메뉴로
@@ -200,7 +224,8 @@ public class BattleScreen implements Screen {
         drawPlayerBoard(g2, leftBoardX, boardY, battleManager.getPlayer1Manager(), "Player 1", 1);
 
         // 오른쪽 플레이어
-        drawPlayerBoard(g2, rightBoardX, boardY, battleManager.getPlayer2Manager(), "Player 2", 2);
+        String player2Label = isAIMode ? "Computer (AI)" : "Player 2";
+        drawPlayerBoard(g2, rightBoardX, boardY, battleManager.getPlayer2Manager(), player2Label, 2);
 
         // 중앙 시간/승자/일시정지 표시
         drawCenterInfo(g2, width, height);
@@ -552,7 +577,7 @@ public class BattleScreen implements Screen {
                 resultText = "Player 1 WINS!";
                 g2.setColor(Color.CYAN);
             } else {
-                resultText = "Player 2 WINS!";
+                resultText = isAIMode ? "AI WINS!" : "Player 2 WINS!";
                 g2.setColor(Color.RED);
             }
 

@@ -1,22 +1,32 @@
 // 메인 윈도우 + 화면 전환기
 package se.tetris.team3.ui;
 
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Image;
+import java.awt.KeyboardFocusManager;
+import java.awt.RenderingHints;
+import java.awt.Toolkit;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+
+import se.tetris.team3.audio.AudioManager;
 import se.tetris.team3.core.Settings;
 import se.tetris.team3.store.SettingsStore;
 import se.tetris.team3.ui.screen.MenuScreen;
 import se.tetris.team3.ui.screen.Screen;
 
-import javax.swing.*;
-import java.awt.*;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-
 public class AppFrame extends JFrame {
     private final Settings settings = new Settings();
     private Screen current;
     private BackBufferPanel canvas; // 서보성 추가
+    private final AudioManager audioManager = new AudioManager();
 
     public AppFrame() {
         // 설정 로드
@@ -73,6 +83,10 @@ public class AppFrame extends JFrame {
 
     public Settings getSettings() {
         return settings;
+    }
+    
+    public AudioManager getAudioManager() {
+        return audioManager;
     }
 
     // 이전 화면 onHide() -> 새 화면 설정 -> 새 화면 onShow() -> 다시 그리기
