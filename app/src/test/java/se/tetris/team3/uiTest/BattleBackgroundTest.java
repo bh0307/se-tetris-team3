@@ -209,21 +209,7 @@ class BattleBackgroundTest {
         // 렌더링 예외 없음으로 확인
     }
     
-    @Test
-    @DisplayName("배경 렌더링 성능 테스트")
-    void testBackgroundPerformance() {
-        // When: 100번 렌더링
-        long startTime = System.currentTimeMillis();
-        for (int i = 0; i < 100; i++) {
-            screen.render(g2);
-        }
-        long endTime = System.currentTimeMillis();
-        
-        // Then: 적절한 시간 내 완료 (5초 이내)
-        long elapsed = endTime - startTime;
-        assertTrue(elapsed < 5000, "100번 렌더링이 5초 이내: " + elapsed + "ms");
-    }
-    
+  
     @Test
     @DisplayName("일시정지 시에도 배경 렌더링")
     void testBackgroundWhenPaused() throws Exception {

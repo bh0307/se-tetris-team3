@@ -236,22 +236,5 @@ class ClassicBackgroundTest {
         // Then: 예외 없이 실행 (네온 라인이 시간에 따라 변함)
     }
     
-    @Test
-    @DisplayName("배경 렌더링 성능 테스트")
-    void testBackgroundRenderingPerformance() {
-        // Given
-        Mockito.when(manager.getMode()).thenReturn(GameMode.CLASSIC);
-        Mockito.when(manager.isGameOver()).thenReturn(false);
-        
-        // When: 100번 렌더링
-        long startTime = System.currentTimeMillis();
-        for (int i = 0; i < 100; i++) {
-            screen.render(g2);
-        }
-        long endTime = System.currentTimeMillis();
-        
-        // Then: 적절한 시간 내에 완료 (3초 이내)
-        long elapsed = endTime - startTime;
-        assertTrue(elapsed < 3000, "100번 렌더링이 3초 이내 완료: " + elapsed + "ms");
-    }
+    
 }

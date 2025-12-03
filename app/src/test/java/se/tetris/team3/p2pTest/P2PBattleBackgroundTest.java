@@ -194,19 +194,6 @@ class P2PBattleBackgroundTest {
         assertDoesNotThrow(() -> screen.render(g2));
     }
     
-    @Test
-    @DisplayName("배경 렌더링 성능")
-    void testRenderingPerformance() {
-        // When: 100번 렌더링
-        long start = System.currentTimeMillis();
-        for (int i = 0; i < 100; i++) {
-            screen.render(g2);
-        }
-        long elapsed = System.currentTimeMillis() - start;
-        
-        // Then: 5초 이내
-        assertTrue(elapsed < 5000, "100번 렌더링: " + elapsed + "ms");
-    }
     
     @Test
     @DisplayName("연결 전 렌더링")

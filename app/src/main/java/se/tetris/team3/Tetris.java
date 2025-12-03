@@ -2,11 +2,16 @@ package se.tetris.team3;
 
 import javax.swing.SwingUtilities;
 import se.tetris.team3.ui.AppFrame;
+import se.tetris.team3.core.ProcessLimiter;
 
 public class Tetris {
 
     public static void main(String[] args) {
         check();
+        
+        // Windows에서 Job Object를 사용해 메모리 제한 (1GB)
+        ProcessLimiter.setMemoryLimit(1024);
+        
         SwingUtilities.invokeLater(() -> new AppFrame().setVisible(true));
     }
 

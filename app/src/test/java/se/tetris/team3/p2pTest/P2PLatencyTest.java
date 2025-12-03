@@ -308,7 +308,7 @@ public class P2PLatencyTest {
     }
     
     @Test
-    @DisplayName("키 입력부터 상대 화면 반영까지 지연시간 200ms 이하")
+    @DisplayName("공격 메시지 전송 및 상대 화면 반영까지 지연시간 200ms 이하")
     void keyInputToScreenUpdate_latency_under200ms() throws Exception {
         P2PConnection server = new P2PConnection(null);
         P2PConnection client = new P2PConnection(null);
@@ -346,7 +346,7 @@ public class P2PLatencyTest {
         connectedLatch.await(5, TimeUnit.SECONDS);
         try { SwingUtilities.invokeAndWait(() -> {}); } catch (Exception ignore) {}
         
-        // 키 입력 시뮬레이션: 라인 클리어로 공격 메시지 전송
+        //공격 메시지 전송
         keyPressTime.set(System.nanoTime());
         boolean[][] garbageRows = new boolean[4][10]; // 4줄 공격
         for (int i = 0; i < 4; i++) {
