@@ -8,6 +8,7 @@ import java.awt.event.KeyEvent;
 
 import javax.swing.Timer;
 
+import se.tetris.team3.ai.AIPlayer;
 import se.tetris.team3.blocks.Block;
 import se.tetris.team3.core.GameMode;
 import se.tetris.team3.core.Settings;
@@ -19,7 +20,7 @@ import se.tetris.team3.ui.AppFrame;
  * 2인 대전 모드 화면
  * - 좌우에 각각 플레이어 보드 표시
  * - Player1(왼쪽): WASD (이동/회전/낙하)
- * - Player2(오른쪽): 화살표 (이동/회전/낙하)
+ * - Player2(오른쪽): 방향키 (이동/회전/낙하)
  * - P: 일시정지, ESC: 메뉴로, ENTER: 재시작
  */
 public class BattleScreen implements Screen {
@@ -37,7 +38,7 @@ public class BattleScreen implements Screen {
     private int centerGap;
     private int topMargin;
 
-    // 타이머 (게임 루프 + 낙하)
+    // 타이머 (게임 로직 + 낙하)
     private Timer gameTimer;
     private Timer dropTimer;
 
@@ -46,17 +47,23 @@ public class BattleScreen implements Screen {
 
     private boolean paused = false;
 
+    // AI 모드 관련
+    private final boolean isAIMode;
+    private AIPlayer aiPlayer;
+
     /**
-     * BattleScreen 생성자
-     * @param frame        부모 프레임
-     * @param mode         대전 모드 (BATTLE_NORMAL, BATTLE_ITEM, BATTLE_TIME)
-     * @param settings     게임 설정
-     * @param timeLimitSeconds 시간제한 모드일 경우 제한 시간(초), 아니면 0
+     * @param isAIMode Player2를 AI로 설정할지 여부
      */
-    public BattleScreen(AppFrame frame, GameMode mode, Settings settings, int timeLimitSeconds) {
+    public BattleScreen(AppFrame frame, GameMode mode, Settings settings,
+                        int timeLimitSeconds, boolean isAIMode) {
         this.frame = frame;
         this.settings = settings;
+        this.isAIMode = isAIMode;
         this.battleManager = new BattleGameManager(mode, settings, timeLimitSeconds);
+
+        if (isAIMode) {
+            this.aiPlayer = new AIPlayer(battleManager.getPlayer2Manager());
+        }
 
         player1LastDrop = System.currentTimeMillis();
         player2LastDrop = System.currentTimeMillis();
@@ -64,6 +71,12 @@ public class BattleScreen implements Screen {
 
     @Override
     public void onShow() {
+        // 게임 시작
+        battleManager.start();
+
+        // 배경 음악 재생
+        frame.getAudioManager().playBattleMusic();
+
         // 게임 로직 업데이트(60fps 정도)
         gameTimer = new Timer(16, evt -> {
             if (!paused) {
@@ -86,9 +99,13 @@ public class BattleScreen implements Screen {
                     p1.stepDownOrFix();
                     player1LastDrop = now;
                 }
-                // Player2 낙하
+                // Player2 낙하 (AI 모드면 AI가 조작)
                 if (now - player2LastDrop >= p2.getGameTimerDelay()) {
-                    p2.stepDownOrFix();
+                    if (isAIMode && aiPlayer != null) {
+                        aiPlayer.makeMove();
+                    } else {
+                        p2.stepDownOrFix();
+                    }
                     player2LastDrop = now;
                 }
             }
@@ -148,23 +165,33 @@ public class BattleScreen implements Screen {
                 player1LastDrop = System.currentTimeMillis();
                 break;
 
-            // Player2: 방향키 + ENTER
+            // Player2: 방향키 + ENTER (AI 모드면 무시)
             case KeyEvent.VK_LEFT:
-                p2.tryMove(p2.getBlockX() - 1, p2.getBlockY());
+                if (!isAIMode) {
+                    p2.tryMove(p2.getBlockX() - 1, p2.getBlockY());
+                }
                 break;
             case KeyEvent.VK_RIGHT:
-                p2.tryMove(p2.getBlockX() + 1, p2.getBlockY());
+                if (!isAIMode) {
+                    p2.tryMove(p2.getBlockX() + 1, p2.getBlockY());
+                }
                 break;
             case KeyEvent.VK_DOWN:
-                p2.stepDownOrFix();
-                player2LastDrop = System.currentTimeMillis();
+                if (!isAIMode) {
+                    p2.stepDownOrFix();
+                    player2LastDrop = System.currentTimeMillis();
+                }
                 break;
             case KeyEvent.VK_UP:
-                p2.rotateBlock();
+                if (!isAIMode) {
+                    p2.rotateBlock();
+                }
                 break;
             case KeyEvent.VK_ENTER:
-                p2.hardDrop();
-                player2LastDrop = System.currentTimeMillis();
+                if (!isAIMode) {
+                    p2.hardDrop();
+                    player2LastDrop = System.currentTimeMillis();
+                }
                 break;
 
             // ESC: 메뉴
@@ -189,17 +216,22 @@ public class BattleScreen implements Screen {
         int nextBoxWidth = (int) (blockSize * 3.5);
         int playerAreaWidth = boardWidth + nextBoxWidth;
         int totalWidth = playerAreaWidth + centerGap + playerAreaWidth;
-        int startX = (width - totalWidth) / 2 - 5;
+
+        // 중앙 기준으로 양쪽 보드 대칭 배치
+        int startX = (width - totalWidth) / 2;
 
         int leftBoardX = startX;
         int rightBoardX = startX + playerAreaWidth + centerGap;
         int boardY = topMargin;
 
         // 왼쪽 플레이어
-        drawPlayerBoard(g2, leftBoardX, boardY, battleManager.getPlayer1Manager(), "Player 1", 1);
+        drawPlayerBoard(g2, leftBoardX, boardY,
+                battleManager.getPlayer1Manager(), "Player 1", 1);
 
         // 오른쪽 플레이어
-        drawPlayerBoard(g2, rightBoardX, boardY, battleManager.getPlayer2Manager(), "Player 2", 2);
+        String player2Label = isAIMode ? "Computer (AI)" : "Player 2";
+        drawPlayerBoard(g2, rightBoardX, boardY,
+                battleManager.getPlayer2Manager(), player2Label, 2);
 
         // 중앙 시간/승자/일시정지 표시
         drawCenterInfo(g2, width, height);
@@ -273,7 +305,7 @@ public class BattleScreen implements Screen {
                 } else if (manager.getFieldValue(row, col) == 1) {
 
                     if (manager.isGarbage(row, col)) {
-                        // 공격 줄: 항상 회색, 색맹/패턴 미적용
+                        // 공격 줄: 항상 회색
                         g2.setColor(Color.GRAY);
                         g2.fillRect(cellX, cellY, blockSizeW - 1, blockSizeH - 1);
                     } else {
@@ -284,7 +316,6 @@ public class BattleScreen implements Screen {
                         g2.fillRect(cellX, cellY, blockSizeW - 1, blockSizeH - 1);
                     }
 
-                    // 아이템 문자 (공격 줄에는 itemField가 항상 0이라 안 뜸)
                     char itemType = manager.getItemType(row, col);
                     if (itemType != 0) {
                         GameScreen.drawCenteredChar(g2, cellX, cellY, blockSizeW, itemType);
@@ -293,7 +324,7 @@ public class BattleScreen implements Screen {
             }
         }
 
-        // 현재 블럭 + 고스트 블록(하드 드롭 위치 미리보기)
+        // 현재 블럭 + 고스트 블록
         if (!manager.isGameOver() && manager.getCurrentBlock() != null) {
             Block cur = manager.getCurrentBlock();
             int[][] shape = cur.getShape();
@@ -301,7 +332,7 @@ public class BattleScreen implements Screen {
             int bx = manager.getBlockX();
             int by = manager.getBlockY();
 
-            // 1. 하드 드롭 위치 계산
+            // 고스트 위치 계산
             int ghostY = by;
             while (true) {
                 boolean canMove = true;
@@ -322,8 +353,8 @@ public class BattleScreen implements Screen {
                 ghostY++;
             }
 
-            // 2. 고스트 블록(연한 색) 먼저 그림
-            Color ghostColor = new Color(base.getRed(), base.getGreen(), base.getBlue(), 80); // 투명도 적용
+            // 고스트 블럭
+            Color ghostColor = new Color(base.getRed(), base.getGreen(), base.getBlue(), 80);
             for (int r = 0; r < shape.length; r++) {
                 for (int c = 0; c < shape[r].length; c++) {
                     if (shape[r][c] != 0) {
@@ -339,7 +370,7 @@ public class BattleScreen implements Screen {
                 }
             }
 
-            // 3. 실제 블록 그림
+            // 실제 블럭
             Integer ir = null, ic = null;
             if (cur.getItemType() != 0) {
                 try {
@@ -371,10 +402,10 @@ public class BattleScreen implements Screen {
 
         // NEXT + GARBAGE 박스 배치
         int nextX = x + boardWidth + 10;
-        int nextTopY = y + blockSize;                        // 보드 위에서 한 칸 내려온 위치
+        int nextTopY = y + blockSize;
         drawNextBlock(g2, nextX, nextTopY, manager);
 
-        int garbageTopY = nextTopY + (int) (blockSize * 7); // NEXT 아래쪽 여유공간 이후
+        int garbageTopY = nextTopY + (int) (blockSize * 7);
         drawGarbagePreview(g2, nextX, garbageTopY, manager);
 
         // 조작 안내
@@ -384,7 +415,6 @@ public class BattleScreen implements Screen {
         int lineH = fontSize + 3;
 
         if (playerNum == 1) {
-            // Player1: WASD + SPACE
             String c1 = "A/D: Move";
             String c2 = "W: Rotate";
             String c3 = "S: Soft Drop";
@@ -396,8 +426,7 @@ public class BattleScreen implements Screen {
             g2.drawString(c3, x + (boardWidth - g2.getFontMetrics().stringWidth(c3)) / 2, yBase + lineH * 2);
             g2.drawString(c4, x + (boardWidth - g2.getFontMetrics().stringWidth(c4)) / 2, yBase + lineH * 3);
 
-        } else {
-            // Player2: 방향키 + ENTER
+        } else if (!isAIMode) {
             String c1 = "←/→: Move";
             String c2 = "↑: Rotate";
             String c3 = "↓: Soft Drop";
@@ -408,25 +437,24 @@ public class BattleScreen implements Screen {
             g2.drawString(c2, x + (boardWidth - g2.getFontMetrics().stringWidth(c2)) / 2, yBase + lineH);
             g2.drawString(c3, x + (boardWidth - g2.getFontMetrics().stringWidth(c3)) / 2, yBase + lineH * 2);
             g2.drawString(c4, x + (boardWidth - g2.getFontMetrics().stringWidth(c4)) / 2, yBase + lineH * 3);
+        } else {
+            String c1 = "AI Controlled";
+            int yBase = y + boardHeight + 15;
+            g2.drawString(c1, x + (boardWidth - g2.getFontMetrics().stringWidth(c1)) / 2, yBase);
         }
     }
 
-    /**
-     * 다음 블럭 미리보기
-     */
     private void drawNextBlock(Graphics2D g2, int nextX, int nextY, GameManager manager) {
         if (manager.getNextBlock() == null) return;
 
         int previewSize = (int) (blockSize * 3.5);
 
-        // 라벨
         g2.setColor(Color.LIGHT_GRAY);
         g2.setFont(new Font("맑은 고딕", Font.BOLD, Math.max(10, blockSize / 2)));
         String label = "NEXT";
         int lw = g2.getFontMetrics().stringWidth(label);
         g2.drawString(label, nextX + (previewSize - lw) / 2, nextY - 5);
 
-        // 박스
         g2.setColor(Color.DARK_GRAY);
         g2.drawRect(nextX, nextY, previewSize, previewSize);
 
@@ -451,47 +479,36 @@ public class BattleScreen implements Screen {
         }
     }
 
-    /**
-     * 넘어간 쓰레기 줄 미리보기 박스
-     * - 항상 라벨/박스는 보이고
-     * - 대기 중인 공격 줄이 있을 때만 안쪽에 회색 칸을 채운다
-     */
     private void drawGarbagePreview(Graphics2D g2, int x, int y, GameManager manager) {
         java.util.List<boolean[]> queue = manager.getPendingGarbagePreview();
 
         final int cols = 10;
         final int rowsPreview = 10;
 
-        // NEXT 박스와 동일한 정사각형 크기
         int boxSize   = (int) (blockSize * 3.5);
         int boxWidth  = boxSize;
         int boxHeight = boxSize;
 
-        // 라벨
         g2.setColor(Color.LIGHT_GRAY);
         g2.setFont(new Font("맑은 고딕", Font.BOLD, Math.max(10, blockSize / 2)));
         String label = "GARBAGE";
         int w = g2.getFontMetrics().stringWidth(label);
         g2.drawString(label, x + (boxWidth - w) / 2, y - 5);
 
-        // 테두리 + 배경
         g2.setColor(Color.DARK_GRAY);
         g2.drawRect(x, y, boxWidth, boxHeight);
         g2.setColor(Color.BLACK);
         g2.fillRect(x + 1, y + 1, boxWidth - 2, boxHeight - 2);
 
-        // 세로 방향
-        int cellH = boxHeight / rowsPreview;          // 한 줄 높이 (정수)
-        int gridHeight = cellH * rowsPreview;         // 실제 그리드 높이
-        int verticalPadding = (boxHeight - gridHeight) / 2; // 위/아래 동일하게
+        int cellH = boxHeight / rowsPreview;
+        int gridHeight = cellH * rowsPreview;
+        int verticalPadding = (boxHeight - gridHeight) / 2;
 
-        // 가로 방향
         double cellWf = (double) boxWidth / cols;
 
         int actualRows = (queue == null) ? 0 : Math.min(rowsPreview, queue.size());
 
         for (int i = 0; i < rowsPreview; i++) {
-            // 아래에서 위로 쌓이게 + 아래쪽 여백도 verticalPadding 만큼
             int rowY = y + boxHeight - verticalPadding - (i + 1) * cellH;
             boolean[] rowData = (i < actualRows ? queue.get(i) : null);
 
@@ -500,11 +517,9 @@ public class BattleScreen implements Screen {
                 int x1 = x + (int) Math.round((col + 1) * cellWf);
                 int cellW = x1 - x0;
 
-                // 그리드 선
                 g2.setColor(new Color(40, 40, 40));
                 g2.drawRect(x0, rowY, cellW, cellH);
 
-                // 공격 줄 채우기
                 if (rowData != null && col < rowData.length && rowData[col]) {
                     g2.setColor(Color.GRAY);
                     g2.fillRect(x0 + 1, rowY + 1, cellW - 1, cellH - 1);
@@ -513,14 +528,10 @@ public class BattleScreen implements Screen {
         }
     }
 
-    /**
-     * 중앙 정보: 시간제한, 일시정지, 승자 표시
-     */
     private void drawCenterInfo(Graphics2D g2, int width, int height) {
         int centerX = width / 2;
         int centerY = height / 2;
 
-        // 시간제한 모드: 남은 시간
         if (battleManager.getBattleMode() == GameMode.BATTLE_TIME) {
             int remaining = battleManager.getRemainingTimeSeconds();
             g2.setColor(Color.YELLOW);
@@ -530,7 +541,6 @@ public class BattleScreen implements Screen {
             g2.drawString(timeStr, centerX - tw / 2, 40);
         }
 
-        // 일시정지
         if (paused) {
             g2.setColor(new Color(0, 0, 0, 180));
             g2.fillRect(0, 0, width, height);
@@ -547,7 +557,6 @@ public class BattleScreen implements Screen {
             g2.drawString(resumeText, centerX - rw / 2, centerY + 50);
         }
 
-        // 게임 오버 + 승자
         if (battleManager.isGameOver()) {
             g2.setColor(new Color(0, 0, 0, 200));
             g2.fillRect(0, 0, width, height);
@@ -563,7 +572,7 @@ public class BattleScreen implements Screen {
                 resultText = "Player 1 WINS!";
                 g2.setColor(Color.CYAN);
             } else {
-                resultText = "Player 2 WINS!";
+                resultText = isAIMode ? "AI WINS!" : "Player 2 WINS!";
                 g2.setColor(Color.RED);
             }
 
@@ -582,11 +591,7 @@ public class BattleScreen implements Screen {
         }
     }
 
-    /**
-     * 대전 모드 전용 배경 - 격렬한 전투 느낌
-     */
     private void drawBattleBackground(Graphics2D g2, int width, int height) {
-        // 어두운 빨강-검정 그라데이션 (전장 느낌)
         java.awt.GradientPaint gradient = new java.awt.GradientPaint(
                 0, 0, new Color(40, 0, 0),
                 0, height, new Color(0, 0, 0)
@@ -594,24 +599,21 @@ public class BattleScreen implements Screen {
         g2.setPaint(gradient);
         g2.fillRect(0, 0, width, height);
 
-        // 대각선 경고 스트라이프 (공사장/위험 느낌)
-        g2.setColor(new Color(255, 100, 0, 40)); // 주황색 반투명
+        g2.setColor(new Color(255, 100, 0, 40));
         for (int i = -height; i < width + height; i += 80) {
             int[] xPoints = {i, i + 40, i + 40 + height, i + height};
             int[] yPoints = {0, 0, height, height};
             g2.fillPolygon(xPoints, yPoints, 4);
         }
 
-        // 중앙 VS 라인 (양쪽 대결 강조)
         int centerX = width / 2;
         g2.setColor(new Color(255, 0, 0, 100));
         g2.setStroke(new java.awt.BasicStroke(4));
         g2.drawLine(centerX, 0, centerX, height);
 
-        // 번개 효과 라인 (좌우 대각선)
-        g2.setColor(new Color(255, 255, 0, 60)); // 노란색 번개
+        g2.setColor(new Color(255, 255, 0, 60));
         g2.setStroke(new java.awt.BasicStroke(3));
-        java.util.Random rand = new java.util.Random(System.currentTimeMillis() / 500); // 느린 애니메이션
+        java.util.Random rand = new java.util.Random(System.currentTimeMillis() / 500);
         for (int i = 0; i < 3; i++) {
             int startX = rand.nextInt(width / 4);
             int endX = width / 4 + rand.nextInt(width / 4);
@@ -624,9 +626,8 @@ public class BattleScreen implements Screen {
             g2.drawLine(startX, y, endX, y + 50);
         }
 
-        // 폭발 파티클 효과 (배경에 흩어진 점들)
-        g2.setColor(new Color(255, 150, 0, 150)); // 주황색 불꽃
-        rand = new java.util.Random(42); // 고정 패턴
+        g2.setColor(new Color(255, 150, 0, 150));
+        rand = new java.util.Random(42);
         for (int i = 0; i < 40; i++) {
             int x = rand.nextInt(width);
             int y = rand.nextInt(height);
@@ -634,7 +635,6 @@ public class BattleScreen implements Screen {
             g2.fillOval(x, y, size, size);
         }
 
-        // 붉은 섬광 (상단)
         g2.setColor(new Color(255, 0, 0, 30));
         g2.fillRect(0, 0, width, height / 4);
 

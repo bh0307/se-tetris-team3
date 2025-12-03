@@ -57,6 +57,12 @@ public class P2PLobbyScreen implements Screen, P2PConnectionListener {
     private final List<String> recentIPs =
             new ArrayList<>(SettingsStore.getRecentP2PIPs());
 
+    // 채팅
+    private boolean chatInputMode = false;
+    private String chatInput = "";
+    private final List<String> chatLog = new ArrayList<>();
+    private int chatCursorBlink = 0;
+
     // ────────── 생성자 ──────────
 
     // 새 P2P 세션 시작용 (Menu → Lobby)
@@ -212,6 +218,9 @@ public class P2PLobbyScreen implements Screen, P2PConnectionListener {
             case DISCONNECT:
                 statusMessage = msg.text;
                 break;
+            case CHAT:
+                chatLog.add("[병호] " + msg.text);
+                break;
             default:
                 break;
         }
@@ -246,6 +255,19 @@ public class P2PLobbyScreen implements Screen, P2PConnectionListener {
         }
 
         if (phase == Phase.LOBBY && connected) {
+            // 채팅 입력 모드
+            if (key == KeyEvent.VK_T) {
+                chatInputMode = true;
+                chatInput = "";
+                return;
+            }
+
+            if (chatInputMode) {
+                handleChatInput(key, e);
+                return;
+            }
+
+            // 기존 ready, mode 변경, esc 처리 등
             handleLobbyInput(key);
             return;
         }
@@ -386,6 +408,39 @@ public class P2PLobbyScreen implements Screen, P2PConnectionListener {
         frame.showScreen(battle);
     }
 
+    // 채팅 입력 처리 함수
+    private void handleChatInput(int key, KeyEvent e) {
+        if (key == KeyEvent.VK_ENTER) {
+            if (!chatInput.isEmpty()) {
+                chatLog.add("[You] " + chatInput);
+                if (connection != null) {
+                    connection.send(P2PMessage.chat(chatInput));
+                }
+            }
+            chatInput = "";
+            chatInputMode = false;
+            return;
+        }
+
+        if (key == KeyEvent.VK_ESCAPE) {
+            chatInput = "";
+            chatInputMode = false;
+            return;
+        }
+
+        if (key == KeyEvent.VK_BACK_SPACE) {
+            if (!chatInput.isEmpty()) {
+                chatInput = chatInput.substring(0, chatInput.length() - 1);
+            }
+            return;
+        }
+
+        char ch = e.getKeyChar();
+        if (ch >= 32 && ch <= 126) {
+            chatInput += ch;
+        }
+    }
+
     // ────────── 렌더링 ──────────
 
     @Override
@@ -495,8 +550,44 @@ public class P2PLobbyScreen implements Screen, P2PConnectionListener {
             g2.drawString("←/→ 또는 A/D : 시간 조정(Time Attack)", leftX, y); y += 22;
         }
 
+        // 채팅 UI 
+        int chatX = 60;
+        int chatY = h - 260;
+        int chatW = w - 120;
+        int chatH = 180;
+
+        // 배경
+        g2.setColor(new Color(30, 30, 30, 180));
+        g2.fillRoundRect(chatX, chatY, chatW, chatH, 15, 15);
+
+        g2.setColor(Color.WHITE);
+        g2.setFont(new Font("맑은 고딕", Font.BOLD, 16));
+        g2.drawString("Chat (T 키로 입력)", chatX + 10, chatY + 25);
+
+        // 최근 8~10줄 출력
+        g2.setFont(new Font("맑은 고딕", Font.PLAIN, 14));
+        int lineY = chatY + 45;
+
+        int maxLines = 8;
+        int start = Math.max(0, chatLog.size() - maxLines);
+        for (int i = start; i < chatLog.size(); i++) {
+            g2.setColor(Color.LIGHT_GRAY);
+            g2.drawString(chatLog.get(i), chatX + 10, lineY);
+            lineY += 20;
+        }
+
+        // 입력창
+        if (chatInputMode) {
+            chatCursorBlink++;
+
+            String inputText = "> " + chatInput;
+            if ((chatCursorBlink / 20) % 2 == 0) inputText += "_";
+
+            g2.setColor(Color.YELLOW);
+            g2.drawString(inputText, chatX + 10, chatY + chatH - 20);
+        }
         g2.setColor(Color.GRAY);
-        g2.drawString("ESC: 메인 메뉴로", 60, h - 40);
+        g2.drawString("ESC: 메인 메뉴로", 60, chatY + chatH - 10);
     }
 
 
