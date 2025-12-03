@@ -6,8 +6,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import javax.swing.Timer;
-
 import se.tetris.team3.blocks.Block;
 import se.tetris.team3.core.GameMode;
 import se.tetris.team3.core.Settings;
@@ -16,6 +14,8 @@ import se.tetris.team3.net.P2PConnection;
 import se.tetris.team3.net.P2PConnectionListener;
 import se.tetris.team3.net.P2PMessage;
 import se.tetris.team3.ui.AppFrame;
+
+import javax.swing.Timer;
 
 /**
  * P2P 대전 게임 화면
@@ -30,7 +30,6 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
     private final int timeLimitSeconds;
     private final boolean asServer;
     private final P2PConnection connection;
-
     private final GameManager myManager;
 
     // 레이아웃
@@ -61,9 +60,10 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
     private volatile int remoteScore = 0;
     private volatile int remoteLevel = 1;
     private volatile boolean remoteGameOver = false;
-
-    private volatile int[][] remoteField;        // [20][10]
-    private volatile char[][] remoteItemField;   // [20][10]
+    private volatile int[][] remoteField;           // [20][10]
+    private volatile char[][] remoteItemField;      // [20][10]
+    private volatile Color[][] remoteColorField;    // [20][10] 각 칸의 색
+    private volatile boolean[][] remoteGarbageMark; // [20][10] 공격 줄 여부
 
     private volatile int[][] remoteCurShape;
     private volatile Color remoteCurColor;
@@ -101,6 +101,7 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
         this.isTimeAttack = (mode == GameMode.BATTLE_TIME);
         this.timeLimitMillis = timeLimitSeconds * 1000L;
 
+        // 내부 GameManager 모드는 BATTLE_ITEM → ITEM, 나머지는 CLASSIC
         GameMode internalMode =
                 (mode == GameMode.BATTLE_ITEM) ? GameMode.ITEM : GameMode.CLASSIC;
         myManager = new GameManager(internalMode);
@@ -117,6 +118,27 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
         connection.setListener(this);
     }
 
+    // 네트워크 에러/연결 끊김 공통 처리
+    private void handleNetworkFailureAndReturnToLobby(String message) {
+        // 더 이상 이 게임에서는 승패/오버 처리하지 않음
+        gameOver = false;
+        winner = 0;
+        paused = false;
+        lagMessage = message;
+
+        // 타이머 정리
+        if (gameTimer != null) gameTimer.stop();
+        if (dropTimer != null) dropTimer.stop();
+        if (stateSendTimer != null) stateSendTimer.stop();
+
+        // 연결 닫기
+        safeCloseConnection();
+
+        // 에러 메시지를 보여주면서, P2P 처음 화면(역할 선택 로비)로 이동
+        P2PLobbyScreen lobby = P2PLobbyScreen.createAfterError(frame, settings, message);
+        frame.showScreen(lobby);
+    }
+
     @Override
     public void onShow() {
         startTime = System.currentTimeMillis();
@@ -127,9 +149,8 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
             if (paused || gameOver) return;
 
             myManager.updateSlowMode();
-            myManager.updateParticles();   // 내쪽 파티클
-            updateRemoteParticles();       // 상대쪽 파티클
-
+            myManager.updateParticles();       // 내쪽 파티클
+            updateRemoteParticles();           // 상대쪽 파티클
             myManager.autoCheckLines();
 
             // 시간제한 모드
@@ -138,9 +159,9 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
                 if (elapsed >= timeLimitMillis && !gameOver) {
                     gameOver = true;
                     int myScore = myManager.getScore();
-                    if (myScore > remoteScore)      winner = 1;
+                    if (myScore > remoteScore) winner = 1;
                     else if (myScore < remoteScore) winner = 2;
-                    else                            winner = 0;
+                    else winner = 0;
                 }
             }
 
@@ -175,6 +196,9 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
         if (gameTimer != null) gameTimer.stop();
         if (dropTimer != null) dropTimer.stop();
         if (stateSendTimer != null) stateSendTimer.stop();
+
+        // 화면에서 빠질 때 랙 메시지/상태 초기화 (다음 진입 시 잔상 방지)
+        lagMessage = "";
     }
 
     // ────────── 내 상태를 STATE 메시지로 전송 ──────────
@@ -186,14 +210,19 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
         msg.myLevel = myManager.getLevel();
         msg.gameOver = myManager.isGameOver();
 
-        // 필드 + 아이템
+        // 필드 + 아이템 + 색상 + garbage 여부
         int h = 20, w = 10;
         msg.field = new int[h][w];
         msg.itemField = new char[h][w];
+        msg.colorField = new Color[h][w];
+        msg.garbageMark = new boolean[h][w];
+
         for (int r = 0; r < h; r++) {
             for (int c = 0; c < w; c++) {
                 msg.field[r][c] = myManager.getFieldValue(r, c);
                 msg.itemField[r][c] = myManager.getItemType(r, c);
+                msg.colorField[r][c] = myManager.getBlockColor(r, c);
+                msg.garbageMark[r][c] = myManager.isGarbage(r, c);
             }
         }
 
@@ -256,7 +285,6 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
     }
 
     // ────────── P2PConnectionListener 구현 ──────────
-
     @Override
     public void onConnected(boolean asServer) {
         // 이미 로비에서 연결된 상태라 여기서는 할 것 없음
@@ -264,9 +292,9 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
 
     @Override
     public void onDisconnected(String reason) {
-        gameOver = true;
-        winner = 1; // 상대가 나가면 내가 이긴 걸로 처리
-        lagMessage = "연결 끊김: " + reason;
+        String msg = "네트워크 연결 끊김: "
+                + (reason == null || reason.isEmpty() ? "알 수 없는 이유" : reason);
+        handleNetworkFailureAndReturnToLobby(msg);
     }
 
     @Override
@@ -279,7 +307,7 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
                 break;
 
             case STATE:
-                // 1. 이전 필드를 백업
+                // 1. 이전 필드를 백업 (diff용)
                 int[][] old = remoteField == null ? null : deepCopy(remoteField);
 
                 // 2. 새 상태 반영
@@ -288,6 +316,9 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
                 remoteGameOver = msg.gameOver;
                 remoteField = msg.field;
                 remoteItemField = msg.itemField;
+                remoteColorField = msg.colorField;
+                remoteGarbageMark = msg.garbageMark;
+
                 remoteCurShape = msg.curShape;
                 remoteCurColor = msg.curColor;
                 remoteCurX = msg.curX;
@@ -295,11 +326,13 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
                 remoteCurItemType = msg.curItemType;
                 remoteCurItemRow = msg.curItemRow;
                 remoteCurItemCol = msg.curItemCol;
+
                 remoteNextShape = msg.nextShape;
                 remoteNextColor = msg.nextColor;
                 remoteNextItemType = msg.nextItemType;
                 remoteNextItemRow = msg.nextItemRow;
                 remoteNextItemCol = msg.nextItemCol;
+
                 remoteGarbagePreview = msg.garbagePreview;
 
                 // 3. diff 기반 파티클 생성
@@ -314,10 +347,10 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
                 }
                 break;
 
-            case PAUSE_STATE: 
+            case PAUSE_STATE:
                 // 상대가 P 눌러서 보낸 상태에 맞춰서 나도 같이 멈추거나 풀기
                 this.paused = msg.paused;
-                
+
                 // 타이머 제어
                 if (this.paused) {
                     if (gameTimer != null) gameTimer.stop();
@@ -329,13 +362,12 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
                 } else {
                     if (gameTimer != null) gameTimer.start();
                     if (dropTimer != null) dropTimer.start();
-                    // 일시정지 해제 시 시작 시간 조정 (일시정지한 시간만큼 미래로 이동)
+                    // 일시정지 해제 시 시작 시간 조정
                     if (isTimeAttack) {
                         long pauseDuration = System.currentTimeMillis() - pauseStartTime;
                         startTime += pauseDuration;
                     }
                 }
-                
                 if (connection != null) {
                     connection.setIdleTimeoutEnabled(!this.paused);
                 }
@@ -359,11 +391,14 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
 
     @Override
     public void onNetworkError(Exception e) {
-        lagMessage = "네트워크 오류: " + e.getMessage();
+        String err = (e != null && e.getMessage() != null && !e.getMessage().trim().isEmpty())
+                ? e.getMessage().trim()
+                : (e != null ? e.getClass().getSimpleName() : "알 수 없는 오류");
+        String msg = "네트워크 오류: " + err;
+        handleNetworkFailureAndReturnToLobby(msg);
     }
 
     // ────────── remoteField diff → 파티클 생성 ──────────
-
     private void spawnRemoteBreakParticlesFromDiff(int[][] oldField, int[][] newField) {
         int h = Math.min(oldField.length, newField.length);
         if (h == 0) return;
@@ -389,8 +424,7 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
         int maxLife;
 
         public Particle(float gridX, float gridY, Color color,
-                        float vx, float vy,
-                        float offsetX, float offsetY) {
+                        float vx, float vy, float offsetX, float offsetY) {
             this.gridX = gridX;
             this.gridY = gridY;
             this.color = color;
@@ -425,36 +459,24 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
             );
             g2.setColor(fadeColor);
             int size = Math.max(1, (int) (4 * alpha));
-
             float px = originX + gridX * blockSize + (blockSize / 2.0f) + offsetX;
             float py = originY + gridY * blockSize + (blockSize / 2.0f) + offsetY;
-
             g2.fillOval((int) px, (int) py, size, size);
         }
     }
 
     private void addRemoteBreakEffect(int gridX, int gridY) {
-        Color blockColor = Color.LIGHT_GRAY; // 상대는 그냥 회색 블럭 기준
-
+        Color blockColor = Color.LIGHT_GRAY; // 상대는 기본 회색 기준
         int particleCount = 8 + (int)(Math.random() * 5);
         for (int i = 0; i < particleCount; i++) {
             float angle = (float)(Math.random() * 2 * Math.PI);
             float speed = 2 + (float)(Math.random() * 4);
-
             float vx = (float)(Math.cos(angle) * speed);
             float vy = (float)(Math.sin(angle) * speed) - 1;
-
             float offsetX = -8 + (float)(Math.random() * 16);
             float offsetY = -8 + (float)(Math.random() * 16);
-
             remoteParticles.add(new Particle(
-                    gridX,
-                    gridY,
-                    blockColor,
-                    vx,
-                    vy,
-                    offsetX,
-                    offsetY
+                    gridX, gridY, blockColor, vx, vy, offsetX, offsetY
             ));
         }
     }
@@ -488,8 +510,8 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
                 frame.showScreen(new MenuScreen(frame));
             } else if (key == KeyEvent.VK_ENTER) {
                 // 게임 끝난 후, 같은 연결 상태로 "READY 대기 로비"로 복귀
-                P2PLobbyScreen lobby =
-                        P2PLobbyScreen.reopenAfterGame(frame, settings, connection, asServer);
+                P2PLobbyScreen lobby = P2PLobbyScreen.reopenAfterGame(
+                        frame, settings, connection, asServer);
                 frame.showScreen(lobby);
             }
             return;
@@ -503,14 +525,12 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
             if (paused) {
                 if (gameTimer != null) gameTimer.stop();
                 if (dropTimer != null) dropTimer.stop();
-                // 일시정지 시작 시간 기록
                 if (isTimeAttack) {
                     pauseStartTime = System.currentTimeMillis();
                 }
             } else {
                 if (gameTimer != null) gameTimer.start();
                 if (dropTimer != null) dropTimer.start();
-                // 일시정지 해제 시 시작 시간 조정 (일시정지한 시간만큼 미래로 이동)
                 if (isTimeAttack) {
                     long pauseDuration = System.currentTimeMillis() - pauseStartTime;
                     startTime += pauseDuration;
@@ -520,8 +540,6 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
             // 네트워크로 일시정지 상태 전파
             if (connection != null) {
                 connection.send(P2PMessage.pauseState(paused));
-
-                // 멈춰 있는 동안에는 타임아웃 끄기 / 풀리면 다시 켜기
                 connection.setIdleTimeoutEnabled(!paused);
             }
             frame.repaint();
@@ -566,19 +584,17 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
             if (connection != null) connection.close();
         } catch (Exception ignore) {}
     }
-    
-    // ────────── 렌더링 ──────────
 
+    // ────────── 렌더링 ──────────
     @Override
     public void render(Graphics2D g2) {
         int width = frame.getWidth();
         int height = frame.getHeight();
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                RenderingHints.VALUE_ANTIALIAS_ON);
 
-        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        
         // 배틀 전용 배경
         drawBattleBackground(g2, width, height);
-
         calculateLayout(width, height);
 
         int nextBoxWidth = (int) (blockSize * 3.5);
@@ -586,36 +602,29 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
         int totalWidth = playerAreaWidth * 2 + centerGap;
         int startX = (width - totalWidth) / 2;
         int boardY = topMargin;
-
         int myX = startX;
         int remoteX = startX + playerAreaWidth + centerGap;
 
         drawLocalSide(g2, myX, boardY);
         drawRemoteSide(g2, remoteX, boardY);
-
         drawCenterInfo(g2, width, height);
     }
 
     private void calculateLayout(int screenWidth, int screenHeight) {
         int usableWidth = screenWidth - 80;
         int usableHeight = screenHeight - 220;
-
         int blockSizeByHeight = usableHeight / 20;
-        int blockSizeByWidth  = usableWidth / 30; // (보드+NEXT)*2 + gap 대략 30칸
-
+        int blockSizeByWidth = usableWidth / 30; // (보드+NEXT)*2 + gap 대략 30칸
         int maxFitSize = Math.min(blockSizeByHeight, blockSizeByWidth);
         int preferred = (settings != null ? settings.resolveBlockSize() : maxFitSize);
         blockSize = Math.max(12, Math.min(preferred, maxFitSize));
-
-        boardWidth  = 10 * blockSize;
+        boardWidth = 10 * blockSize;
         boardHeight = 20 * blockSize;
-
         centerGap = Math.max(35, blockSize * 2);
         topMargin = Math.max(75, (screenHeight - boardHeight - 100) / 2);
     }
 
     // ────────── 왼쪽(내 보드) ──────────
-
     private void drawLocalSide(Graphics2D g2, int x, int y) {
         int nextX = x + boardWidth + 10;
         int nextTopY = y + blockSize;
@@ -631,11 +640,9 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
         g2.setFont(new Font("맑은 고딕", Font.PLAIN, fontSize));
         int lineH = fontSize + 3;
         int yBase = y + boardHeight + 15;
-
         String c1 = "←/→ 또는 A/D : 이동";
         String c2 = "↑/W : 회전, ↓/S : 소프트 드롭";
         String c3 = "Space/Enter : 하드 드롭";
-
         g2.drawString(c1, x, yBase);
         g2.drawString(c2, x, yBase + lineH);
         g2.drawString(c3, x, yBase + lineH * 2);
@@ -675,8 +682,18 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
                     g2.setColor(Color.WHITE);
                     g2.fillRect(cellX, cellY, blockSize - 1, blockSize - 1);
                 } else if (myManager.getFieldValue(row, col) == 1) {
-                    g2.setColor(Color.DARK_GRAY);
+                    // ★ 배틀 모드와 동일: 공격 줄이면 회색, 아니면 원래 블록 색
+                    if (myManager.isGarbage(row, col)) {
+                        g2.setColor(Color.GRAY); // 공격 줄
+                    } else {
+                        Color color = myManager.getBlockColor(row, col);
+                        if (color == null) color = Color.DARK_GRAY;
+                        g2.setColor(color);
+                    }
+
                     g2.fillRect(cellX, cellY, blockSize - 1, blockSize - 1);
+
+                    // 아이템 문자
                     char itemType = myManager.getItemType(row, col);
                     if (itemType != 0) {
                         GameScreen.drawCenteredChar(g2, cellX, cellY, blockSize, itemType);
@@ -685,14 +702,13 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
             }
         }
 
-        // === 여기부터 "현재 떨어지는 블록" 그리기 추가 ===
+        // 현재 블럭
         if (!myManager.isGameOver() && myManager.getCurrentBlock() != null) {
             Block cur = myManager.getCurrentBlock();
             int[][] shape = cur.getShape();
             Color color = cur.getColor();
             int baseX = myManager.getBlockX();
             int baseY = myManager.getBlockY();
-
             Integer ir = null, ic = null;
             if (cur.getItemType() != 0) {
                 try {
@@ -705,17 +721,14 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
             for (int r = 0; r < shape.length; r++) {
                 for (int c = 0; c < shape[r].length; c++) {
                     if (shape[r][c] == 0) continue;
-
                     int gx = baseX + c;
                     int gy = baseY + r;
                     if (gx < 0 || gx >= 10 || gy < 0 || gy >= 20) continue;
-
                     int cellX = x + gx * blockSize;
                     int cellY = y + gy * blockSize;
                     g2.fillRect(cellX, cellY, blockSize - 1, blockSize - 1);
-
-                    if (cur.getItemType() != 0 && ir != null && ic != null &&
-                        r == ir && c == ic) {
+                    if (cur.getItemType() != 0 && ir != null && ic != null
+                            && r == ir && c == ic) {
                         GameScreen.drawCenteredChar(
                                 g2, cellX, cellY, blockSize, cur.getItemType());
                     }
@@ -727,9 +740,7 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
         myManager.renderParticles(g2, x, y, blockSize);
     }
 
-
     // ────────── 오른쪽(상대 보드) ──────────
-
     private void drawRemoteSide(Graphics2D g2, int x, int y) {
         int nextX = x + boardWidth + 10;
         int nextTopY = y + blockSize;
@@ -783,15 +794,37 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
                     if (remoteField[row][col] == 1) {
                         int cellX = x + col * blockSize;
                         int cellY = y + row * blockSize;
-                        g2.setColor(Color.DARK_GRAY);
+
+                        // ★ 배틀 모드와 동일: 공격 줄이면 회색, 아니면 원래 블록 색
+                        boolean isGarbage = false;
+                        if (remoteGarbageMark != null
+                                && row < remoteGarbageMark.length
+                                && col < remoteGarbageMark[row].length) {
+                            isGarbage = remoteGarbageMark[row][col];
+                        }
+
+                        if (isGarbage) {
+                            g2.setColor(Color.GRAY);
+                        } else {
+                            Color color = null;
+                            if (remoteColorField != null
+                                    && row < remoteColorField.length
+                                    && col < remoteColorField[row].length) {
+                                color = remoteColorField[row][col];
+                            }
+                            if (color == null) color = Color.DARK_GRAY;
+                            g2.setColor(color);
+                        }
+
                         g2.fillRect(cellX, cellY, blockSize - 1, blockSize - 1);
 
-                        if (remoteItemField != null &&
-                            row < remoteItemField.length &&
-                            col < remoteItemField[row].length) {
+                        if (remoteItemField != null
+                                && row < remoteItemField.length
+                                && col < remoteItemField[row].length) {
                             char itemType = remoteItemField[row][col];
                             if (itemType != 0) {
-                                GameScreen.drawCenteredChar(g2, cellX, cellY, blockSize, itemType);
+                                GameScreen.drawCenteredChar(
+                                        g2, cellX, cellY, blockSize, itemType);
                             }
                         }
                     }
@@ -811,9 +844,11 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
                             int cellX = x + gx * blockSize;
                             int cellY = y + gy * blockSize;
                             g2.fillRect(cellX, cellY, blockSize - 1, blockSize - 1);
-                            if (remoteCurItemType != 0 &&
-                                r == remoteCurItemRow && c == remoteCurItemCol) {
-                                GameScreen.drawCenteredChar(g2, cellX, cellY, blockSize, remoteCurItemType);
+                            if (remoteCurItemType != 0
+                                    && r == remoteCurItemRow
+                                    && c == remoteCurItemCol) {
+                                GameScreen.drawCenteredChar(
+                                        g2, cellX, cellY, blockSize, remoteCurItemType);
                             }
                         }
                     }
@@ -823,11 +858,10 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
     }
 
     // ────────── NEXT / GARBAGE (내 쪽) ──────────
-
     private void drawNextBlockLocal(Graphics2D g2, int nextX, int nextY, GameManager gm) {
         if (gm.getNextBlock() == null) return;
-
         int previewSize = (int) (blockSize * 3.5);
+
         g2.setColor(Color.LIGHT_GRAY);
         g2.setFont(new Font("맑은 고딕", Font.BOLD, Math.max(10, blockSize / 2)));
         String label = "NEXT";
@@ -840,7 +874,6 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
         Block nb = gm.getNextBlock();
         int[][] shape = nb.getShape();
         Color color = nb.getColor();
-
         int nextBlockSize = (int) (blockSize * 0.75);
         int shapeW = shape[0].length;
         int shapeH = shape.length;
@@ -862,9 +895,10 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
                     int cellY = nextY + offsetY + r * nextBlockSize;
                     g2.setColor(color);
                     g2.fillRect(cellX, cellY, nextBlockSize - 1, nextBlockSize - 1);
-                    if (nb.getItemType() != 0 && ir != null && ic != null &&
-                        r == ir && c == ic) {
-                        GameScreen.drawCenteredChar(g2, cellX, cellY, nextBlockSize, nb.getItemType());
+                    if (nb.getItemType() != 0 && ir != null && ic != null
+                            && r == ir && c == ic) {
+                        GameScreen.drawCenteredChar(
+                                g2, cellX, cellY, nextBlockSize, nb.getItemType());
                     }
                 }
             }
@@ -877,11 +911,10 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
     }
 
     // ────────── NEXT / GARBAGE (상대 쪽) ──────────
-
     private void drawNextBlockRemote(Graphics2D g2, int nextX, int nextY) {
         if (remoteNextShape == null || remoteNextColor == null) return;
-
         int previewSize = (int) (blockSize * 3.5);
+
         g2.setColor(Color.LIGHT_GRAY);
         g2.setFont(new Font("맑은 고딕", Font.BOLD, Math.max(10, blockSize / 2)));
         String label = "NEXT";
@@ -893,7 +926,6 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
 
         int[][] shape = remoteNextShape;
         Color color = remoteNextColor;
-
         int nextBlockSize = (int) (blockSize * 0.75);
         int shapeW = shape[0].length;
         int shapeH = shape.length;
@@ -907,9 +939,11 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
                     int cellY = nextY + offsetY + r * nextBlockSize;
                     g2.setColor(color);
                     g2.fillRect(cellX, cellY, nextBlockSize - 1, nextBlockSize - 1);
-                    if (remoteNextItemType != 0 &&
-                        r == remoteNextItemRow && c == remoteNextItemCol) {
-                        GameScreen.drawCenteredChar(g2, cellX, cellY, nextBlockSize, remoteNextItemType);
+                    if (remoteNextItemType != 0
+                            && r == remoteNextItemRow
+                            && c == remoteNextItemCol) {
+                        GameScreen.drawCenteredChar(
+                                g2, cellX, cellY, nextBlockSize, remoteNextItemType);
                     }
                 }
             }
@@ -924,12 +958,12 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
         drawGarbagePreviewGeneric(g2, x, y, list);
     }
 
-    private void drawGarbagePreviewGeneric(Graphics2D g2, int x, int y, List<boolean[]> queue) {
+    private void drawGarbagePreviewGeneric(Graphics2D g2, int x, int y,
+                                           List<boolean[]> queue) {
         final int cols = 10;
         final int rowsPreview = 10;
-
-        int boxSize   = (int) (blockSize * 3.5);
-        int boxWidth  = boxSize;
+        int boxSize = (int) (blockSize * 3.5);
+        int boxWidth = boxSize;
         int boxHeight = boxSize;
 
         g2.setColor(Color.LIGHT_GRAY);
@@ -949,7 +983,6 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
         double cellWf = (double) boxWidth / cols;
 
         int actualRows = (queue == null) ? 0 : Math.min(rowsPreview, queue.size());
-
         for (int i = 0; i < rowsPreview; i++) {
             int rowY = y + boxHeight - verticalPadding - (i + 1) * cellH;
             boolean[] rowData = (i < actualRows ? queue.get(i) : null);
@@ -971,7 +1004,6 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
     }
 
     // ────────── 중앙 정보 (시간, 랙, 승패) ──────────
-
     private void drawCenterInfo(Graphics2D g2, int width, int height) {
         int cx = width / 2;
         int cy = height / 2;
@@ -1009,13 +1041,19 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
         if (gameOver) {
             g2.setColor(new Color(0, 0, 0, 200));
             g2.fillRect(0, 0, width, height);
-
             g2.setFont(new Font("맑은 고딕", Font.BOLD, 40));
             String res;
             Color col;
-            if (winner == 1) { res = "YOU WIN!"; col = Color.CYAN; }
-            else if (winner == 2) { res = "YOU LOSE"; col = Color.RED; }
-            else { res = "DRAW"; col = Color.YELLOW; }
+            if (winner == 1) {
+                res = "YOU WIN!";
+                col = Color.CYAN;
+            } else if (winner == 2) {
+                res = "YOU LOSE";
+                col = Color.RED;
+            } else {
+                res = "DRAW";
+                col = Color.YELLOW;
+            }
             g2.setColor(col);
             int tw = g2.getFontMetrics().stringWidth(res);
             g2.drawString(res, cx - tw / 2, cy - 20);
@@ -1030,19 +1068,19 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
             g2.drawString(t2, cx - w2 / 2, cy + 60);
         }
     }
-    
+
     /**
      * 대전 모드 전용 배경 - 격렬한 전투 느낌
      */
     private void drawBattleBackground(Graphics2D g2, int width, int height) {
         // 어두운 빨강-검정 그라데이션 (전장 느낌)
         GradientPaint gradient = new GradientPaint(
-            0, 0, new Color(40, 0, 0),
-            0, height, new Color(0, 0, 0)
+                0, 0, new Color(40, 0, 0),
+                0, height, new Color(0, 0, 0)
         );
         g2.setPaint(gradient);
         g2.fillRect(0, 0, width, height);
-        
+
         // 대각선 경고 스트라이프 (공사장/위험 느낌)
         g2.setColor(new Color(255, 100, 0, 40)); // 주황색 반투명
         for (int i = -height; i < width + height; i += 80) {
@@ -1050,13 +1088,13 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
             int[] yPoints = {0, 0, height, height};
             g2.fillPolygon(xPoints, yPoints, 4);
         }
-        
+
         // 중앙 VS 라인 (양쪽 대결 강조)
         int centerX = width / 2;
         g2.setColor(new Color(255, 0, 0, 100));
         g2.setStroke(new BasicStroke(4));
         g2.drawLine(centerX, 0, centerX, height);
-        
+
         // 번개 효과 라인 (좌우 대각선)
         g2.setColor(new Color(255, 255, 0, 60)); // 노란색 번개
         g2.setStroke(new BasicStroke(3));
@@ -1066,13 +1104,13 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
             int endX = width / 4 + rand.nextInt(width / 4);
             int y = rand.nextInt(height);
             g2.drawLine(startX, y, endX, y + 50);
-            
+
             startX = width - rand.nextInt(width / 4);
             endX = width - (width / 4 + rand.nextInt(width / 4));
             y = rand.nextInt(height);
             g2.drawLine(startX, y, endX, y + 50);
         }
-        
+
         // 폭발 파티클 효과 (배경에 흩어진 점들)
         g2.setColor(new Color(255, 150, 0, 150)); // 주황색 불꽃
         rand = new java.util.Random(42); // 고정 패턴
@@ -1082,11 +1120,10 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
             int size = rand.nextInt(4) + 2;
             g2.fillOval(x, y, size, size);
         }
-        
+
         // 붉은 섬광 (상단)
         g2.setColor(new Color(255, 0, 0, 30));
         g2.fillRect(0, 0, width, height / 4);
-        
         g2.setStroke(new BasicStroke(1));
     }
 }
