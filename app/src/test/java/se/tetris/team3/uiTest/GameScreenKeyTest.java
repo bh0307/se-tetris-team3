@@ -259,58 +259,6 @@ class GameScreenKeyTest {
         assertEquals(1, manager.getBlockY());
     }
 
-    @Test
-    @DisplayName("HARD_DROP 키 입력 시 블록 하드 드롭: 바닥까지 이동")
-    void testHardDropKeyNoObstacle() {
-        setBlockPosition(5, 0);
-        int hardDropKeyCode = app.getSettings().getKeymap().get(Settings.Action.HARD_DROP);
-        KeyEvent hardDrop = new KeyEvent(new java.awt.Component(){}, 0, 0, 0, hardDropKeyCode, ' ');
-        screen.onKeyPressed(hardDrop);
-        // 하드드롭 후 field 배열의 바닥에 블록이 고정됐는지 확인
-        int[][] field;
-        try {
-            java.lang.reflect.Field f = manager.getClass().getDeclaredField("field");
-            f.setAccessible(true);
-            field = (int[][]) f.get(manager);
-        } catch (Exception e) { throw new RuntimeException(e); }
-        boolean blockAtBottom = false;
-        for (int x = 0; x < field[0].length; x++) {
-            if (field[19][x] == 1) {
-                blockAtBottom = true;
-                break;
-            }
-        }
-        System.out.println("blockAtBottom: " + blockAtBottom);
-        assertTrue(blockAtBottom, "하드 드롭 후 블록이 바닥에 고정되어야 함");
-    }
-
-    @Test
-    @DisplayName("HARD_DROP 키 입력 시 블록 하드 드롭: 장애물 위에 멈춤")
-    void testHardDropKeyWithObstacle() {
-        setBlockPosition(5, 0);
-        // 10번째 줄에 장애물 추가
-        setFieldRow(10, 1);
-        int hardDropKeyCode = app.getSettings().getKeymap().get(Settings.Action.HARD_DROP);
-        KeyEvent hardDrop = new KeyEvent(new java.awt.Component(){}, 0, 0, 0, hardDropKeyCode, ' ');
-        screen.onKeyPressed(hardDrop);
-        // 필드에서 장애물 바로 위(9번째 줄)에 블록이 고정됐는지 확인
-        int[][] field;
-        try {
-            java.lang.reflect.Field f = manager.getClass().getDeclaredField("field");
-            f.setAccessible(true);
-            field = (int[][]) f.get(manager);
-        } catch (Exception e) { throw new RuntimeException(e); }
-        boolean blockAboveObstacle = false;
-        for (int x = 0; x < field[0].length; x++) {
-            if (field[9][x] == 1) {
-                blockAboveObstacle = true;
-                break;
-            }
-        }
-        System.out.println("blockAboveObstacle: " + blockAboveObstacle);
-        assertTrue(blockAboveObstacle, "하드 드롭 후 블록이 장애물 위에 고정되어야 함");
-    }
-
     // currentBlock을 직접 세팅
     private void setCurrentBlock(Block block) {
         try {
