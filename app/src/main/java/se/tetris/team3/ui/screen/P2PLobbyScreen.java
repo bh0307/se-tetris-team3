@@ -99,6 +99,27 @@ public class P2PLobbyScreen implements Screen, P2PConnectionListener {
         return lobby;
     }
 
+    // 네트워크 에러 후, 처음 P2P 진입 화면으로 돌아올 때 사용하는 생성 헬퍼
+    public static P2PLobbyScreen createAfterError(
+            AppFrame frame,
+            Settings settings,
+            String errorMessage
+    ) {
+        P2PLobbyScreen lobby = new P2PLobbyScreen(frame, settings);
+
+        // 에러 상황에서 들어온 것이므로, 항상 처음 화면(ROLE_SELECT)부터 시작
+        lobby.phase = Phase.ROLE_SELECT;
+        lobby.asServer = false;
+        lobby.connected = false;
+        lobby.myReady = false;
+        lobby.otherReady = false;
+
+        // 상단에 에러 메시지를 보여줌
+        lobby.statusMessage = (errorMessage == null ? "" : errorMessage);
+
+        return lobby;
+    }
+
     @Override
     public void onShow() {
         System.out.println("onShow LOBBY this=" + this + " phase=" + phase);
@@ -395,6 +416,13 @@ public class P2PLobbyScreen implements Screen, P2PConnectionListener {
         String title = "P2P BATTLE";
         int tw = g2.getFontMetrics().stringWidth(title);
         g2.drawString(title, (w - tw) / 2, 100);
+
+        // 에러 / 안내 메시지 표시
+        if (statusMessage != null && !statusMessage.isEmpty()) {
+            g2.setColor(Color.LIGHT_GRAY);
+            g2.setFont(new Font("맑은 고딕", Font.PLAIN, 16));
+            drawCenterLine(g2, w, 140, statusMessage);
+        }
 
         g2.setFont(new Font("맑은 고딕", Font.PLAIN, 24));
         drawCenterLine(g2, w, 200, "1 / S : 서버로 방 만들기");

@@ -26,7 +26,7 @@ public class P2PMessage implements Serializable {
         ATTACK,         // 쓰레기 줄 정보
         LAG_WARNING,    // 랙 경고 메시지
         ERROR,          // 오류 메시지
-        DISCONNECT,      // 연결 종료
+        DISCONNECT,     // 연결 종료
         PAUSE_STATE     // 일시정지 상태
     }
 
@@ -35,11 +35,11 @@ public class P2PMessage implements Serializable {
     /** 공통 텍스트 필드 (버전, 상태, 에러, 랙 경고 이유 등) */
     public String text;
 
-    // MODE_INFO 
+    // MODE_INFO
     public GameMode gameMode;
     public int timeLimitSeconds;
 
-    // READY_STATE 
+    // READY_STATE
     public boolean ready;
 
     // ATTACK
@@ -48,14 +48,18 @@ public class P2PMessage implements Serializable {
     // PAUSE_STATE
     public boolean paused;
 
-    // STATE (게임 중 상태 스냅샷) 
+    // STATE (게임 중 상태 스냅샷)
     public int myScore;
     public int myLevel;
     public boolean gameOver;
 
-    public int[][] field;           // 고정 블럭
+    /** 고정 블럭 정보 */
+    public int[][] field;           // 고정 블럭 (존재 여부)
     public char[][] itemField;      // 각 칸의 아이템 정보
+    public Color[][] colorField;    // 각 칸의 실제 색상
+    public boolean[][] garbageMark; // 각 칸이 공격(garbage) 블록인지 여부
 
+    /** 현재 조작 중인 블럭 정보 */
     public int[][] curShape;        // 현재 조작 중 블럭 모양
     public Color   curColor;        // 현재 블럭 색
     public int     curX, curY;      // 현재 블럭 위치
@@ -63,15 +67,17 @@ public class P2PMessage implements Serializable {
     public int     curItemRow;      // 그 아이템의 shape 내부 row
     public int     curItemCol;      // 그 아이템의 shape 내부 col
 
+    /** 다음 블럭 정보 */
     public int[][] nextShape;       // 다음 블럭 모양
     public Color   nextColor;       // 다음 블럭 색
     public char    nextItemType;    // 다음 블럭 아이템 타입
     public int     nextItemRow;     // 다음 블럭 아이템 row
     public int     nextItemCol;     // 다음 블럭 아이템 col
 
+    /** 대기 중인 공격 줄 미리보기 */
     public boolean[][] garbagePreview; // 대기 중인 공격 줄 미리보기
 
-    // 정적 헬퍼 생성 메서드 
+    // 정적 헬퍼 생성 메서드
 
     /** 버전 정보 포함 HELLO */
     public static P2PMessage hello() {
@@ -115,7 +121,7 @@ public class P2PMessage implements Serializable {
         return m;
     }
 
-        public static P2PMessage pauseState(boolean paused) {
+    public static P2PMessage pauseState(boolean paused) {
         P2PMessage m = new P2PMessage();
         m.type = Type.PAUSE_STATE;
         m.paused = paused;
@@ -144,6 +150,7 @@ public class P2PMessage implements Serializable {
         return m;
     }
 
+    /** STATE 메시지용 빈 객체 생성 (필드는 나중에 채움) */
     public static P2PMessage emptyState() {
         P2PMessage m = new P2PMessage();
         m.type = Type.STATE;
@@ -156,4 +163,3 @@ public class P2PMessage implements Serializable {
         return "P2PMessage{" + type + ", text=" + text + "}";
     }
 }
-

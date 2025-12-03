@@ -14,7 +14,6 @@ import se.tetris.team3.core.Settings;
 import se.tetris.team3.gameManager.BattleGameManager;
 import se.tetris.team3.gameManager.GameManager;
 import se.tetris.team3.ui.AppFrame;
-import se.tetris.team3.ui.render.PatternPainter;
 
 /**
  * 2인 대전 모드 화면
@@ -130,37 +129,37 @@ public class BattleScreen implements Screen {
         GameManager p2 = battleManager.getPlayer2Manager();
 
         switch (key) {
-            // Player1: 방향키
-            case KeyEvent.VK_LEFT:
+            // Player1: WASD + SPACE
+            case KeyEvent.VK_A: // left
                 p1.tryMove(p1.getBlockX() - 1, p1.getBlockY());
                 break;
-            case KeyEvent.VK_RIGHT:
+            case KeyEvent.VK_D: // right
                 p1.tryMove(p1.getBlockX() + 1, p1.getBlockY());
                 break;
-            case KeyEvent.VK_DOWN:
+            case KeyEvent.VK_S: // soft drop
                 p1.stepDownOrFix();
                 player1LastDrop = System.currentTimeMillis();
                 break;
-            case KeyEvent.VK_UP:
+            case KeyEvent.VK_W: // rotate
                 p1.rotateBlock();
                 break;
-            case KeyEvent.VK_SPACE:
+            case KeyEvent.VK_SPACE: // hard drop
                 p1.hardDrop();
                 player1LastDrop = System.currentTimeMillis();
                 break;
 
-            // Player2: WASD
-            case KeyEvent.VK_A:
+            // Player2: 방향키 + ENTER
+            case KeyEvent.VK_LEFT:
                 p2.tryMove(p2.getBlockX() - 1, p2.getBlockY());
                 break;
-            case KeyEvent.VK_D:
+            case KeyEvent.VK_RIGHT:
                 p2.tryMove(p2.getBlockX() + 1, p2.getBlockY());
                 break;
-            case KeyEvent.VK_S:
+            case KeyEvent.VK_DOWN:
                 p2.stepDownOrFix();
                 player2LastDrop = System.currentTimeMillis();
                 break;
-            case KeyEvent.VK_W:
+            case KeyEvent.VK_UP:
                 p2.rotateBlock();
                 break;
             case KeyEvent.VK_ENTER:
@@ -168,7 +167,7 @@ public class BattleScreen implements Screen {
                 player2LastDrop = System.currentTimeMillis();
                 break;
 
-            // ESC: 메뉴로
+            // ESC: 메뉴
             case KeyEvent.VK_ESCAPE:
                 frame.showScreen(new MenuScreen(frame));
                 break;
@@ -190,7 +189,7 @@ public class BattleScreen implements Screen {
         int nextBoxWidth = (int) (blockSize * 3.5);
         int playerAreaWidth = boardWidth + nextBoxWidth;
         int totalWidth = playerAreaWidth + centerGap + playerAreaWidth;
-        int startX = (width - totalWidth) / 2 - 20; // 왼쪽으로 20픽셀 이동
+        int startX = (width - totalWidth) / 2 - 5;
 
         int leftBoardX = startX;
         int rightBoardX = startX + playerAreaWidth + centerGap;
@@ -218,14 +217,14 @@ public class BattleScreen implements Screen {
 
         int maxFitSize = Math.min(blockSizeByHeight, blockSizeByWidth);
 
-        // ⚙️ 설정에 따른 선호 블록 크기 (small/medium/large)
+        // 설정에 따른 선호 블록 크기 (small/medium/large)
         int preferred = (settings != null ? settings.resolveBlockSize() : maxFitSize);
 
-        // 화면에 안 튀어나가도록 상한은 maxFitSize, 너무 작진 않게 하한은 12
         blockSize = Math.max(12, Math.min(preferred, maxFitSize));
-        blockSizeW = (int)(blockSize * 1.2); // 가로 길이 20% 증가
-        blockSizeH = (int)(blockSize * 1.7); // 세로 길이 70% 증가
 
+        // 싱글 모드와 동일한 비율 사용
+        blockSizeW = blockSize;
+        blockSizeH = (int)(blockSize * 1.15);
         boardWidth  = 10 * blockSizeW;
         boardHeight = 20 * blockSizeH;
 
@@ -237,7 +236,7 @@ public class BattleScreen implements Screen {
      * 한 플레이어 보드 + NEXT + GARBAGE + 조작 안내 그리기
      */
     private void drawPlayerBoard(Graphics2D g2, int x, int y,
-                                GameManager manager, String playerName, int playerNum) {
+                                 GameManager manager, String playerName, int playerNum) {
 
         // 플레이어 이름
         g2.setColor(Color.CYAN);
@@ -269,17 +268,26 @@ public class BattleScreen implements Screen {
                 int cellY = y + row * blockSizeH;
 
                 if (manager.isRowFlashing(row)) {
-                    // 플래시 효과
                     g2.setColor(Color.WHITE);
                     g2.fillRect(cellX, cellY, blockSizeW - 1, blockSizeH - 1);
                 } else if (manager.getFieldValue(row, col) == 1) {
-                    g2.setColor(Color.DARK_GRAY);
-                    g2.fillRect(cellX, cellY, blockSizeW - 1, blockSizeH - 1);
 
-                    // 고정 블럭에 아이템이 있으면 글자 표시
+                    if (manager.isGarbage(row, col)) {
+                        // 공격 줄: 항상 회색, 색맹/패턴 미적용
+                        g2.setColor(Color.GRAY);
+                        g2.fillRect(cellX, cellY, blockSizeW - 1, blockSizeH - 1);
+                    } else {
+                        // 직접 쌓은 블록: 원래 색
+                        Color color = manager.getBlockColor(row, col);
+                        if (color == null) color = Color.DARK_GRAY;
+                        g2.setColor(color);
+                        g2.fillRect(cellX, cellY, blockSizeW - 1, blockSizeH - 1);
+                    }
+
+                    // 아이템 문자 (공격 줄에는 itemField가 항상 0이라 안 뜸)
                     char itemType = manager.getItemType(row, col);
                     if (itemType != 0) {
-                        GameScreen.drawCenteredChar(g2, cellX, cellY, blockSize, itemType);
+                        GameScreen.drawCenteredChar(g2, cellX, cellY, blockSizeW, itemType);
                     }
                 }
             }
@@ -376,21 +384,30 @@ public class BattleScreen implements Screen {
         int lineH = fontSize + 3;
 
         if (playerNum == 1) {
-            String c1 = "←/→: Move";
-            String c2 = "↑: Rotate";
-            String c3 = "↓: Drop";
-            int yBase = y + boardHeight + 15;
-            g2.drawString(c1, x + (boardWidth - g2.getFontMetrics().stringWidth(c1)) / 2, yBase);
-            g2.drawString(c2, x + (boardWidth - g2.getFontMetrics().stringWidth(c2)) / 2, yBase + lineH);
-            g2.drawString(c3, x + (boardWidth - g2.getFontMetrics().stringWidth(c3)) / 2, yBase + lineH * 2);
-        } else {
+            // Player1: WASD + SPACE
             String c1 = "A/D: Move";
             String c2 = "W: Rotate";
-            String c3 = "S: Drop";
+            String c3 = "S: Soft Drop";
+            String c4 = "SPACE: Hard Drop";
+
             int yBase = y + boardHeight + 15;
             g2.drawString(c1, x + (boardWidth - g2.getFontMetrics().stringWidth(c1)) / 2, yBase);
             g2.drawString(c2, x + (boardWidth - g2.getFontMetrics().stringWidth(c2)) / 2, yBase + lineH);
             g2.drawString(c3, x + (boardWidth - g2.getFontMetrics().stringWidth(c3)) / 2, yBase + lineH * 2);
+            g2.drawString(c4, x + (boardWidth - g2.getFontMetrics().stringWidth(c4)) / 2, yBase + lineH * 3);
+
+        } else {
+            // Player2: 방향키 + ENTER
+            String c1 = "←/→: Move";
+            String c2 = "↑: Rotate";
+            String c3 = "↓: Soft Drop";
+            String c4 = "ENTER: Hard Drop";
+
+            int yBase = y + boardHeight + 15;
+            g2.drawString(c1, x + (boardWidth - g2.getFontMetrics().stringWidth(c1)) / 2, yBase);
+            g2.drawString(c2, x + (boardWidth - g2.getFontMetrics().stringWidth(c2)) / 2, yBase + lineH);
+            g2.drawString(c3, x + (boardWidth - g2.getFontMetrics().stringWidth(c3)) / 2, yBase + lineH * 2);
+            g2.drawString(c4, x + (boardWidth - g2.getFontMetrics().stringWidth(c4)) / 2, yBase + lineH * 3);
         }
     }
 
@@ -496,12 +513,6 @@ public class BattleScreen implements Screen {
         }
     }
 
-
-
-
-
-
-
     /**
      * 중앙 정보: 시간제한, 일시정지, 승자 표시
      */
@@ -570,19 +581,19 @@ public class BattleScreen implements Screen {
             g2.drawString(menuText, centerX - mtw / 2, centerY + 60);
         }
     }
-    
+
     /**
      * 대전 모드 전용 배경 - 격렬한 전투 느낌
      */
     private void drawBattleBackground(Graphics2D g2, int width, int height) {
         // 어두운 빨강-검정 그라데이션 (전장 느낌)
         java.awt.GradientPaint gradient = new java.awt.GradientPaint(
-            0, 0, new Color(40, 0, 0),
-            0, height, new Color(0, 0, 0)
+                0, 0, new Color(40, 0, 0),
+                0, height, new Color(0, 0, 0)
         );
         g2.setPaint(gradient);
         g2.fillRect(0, 0, width, height);
-        
+
         // 대각선 경고 스트라이프 (공사장/위험 느낌)
         g2.setColor(new Color(255, 100, 0, 40)); // 주황색 반투명
         for (int i = -height; i < width + height; i += 80) {
@@ -590,13 +601,13 @@ public class BattleScreen implements Screen {
             int[] yPoints = {0, 0, height, height};
             g2.fillPolygon(xPoints, yPoints, 4);
         }
-        
+
         // 중앙 VS 라인 (양쪽 대결 강조)
         int centerX = width / 2;
         g2.setColor(new Color(255, 0, 0, 100));
         g2.setStroke(new java.awt.BasicStroke(4));
         g2.drawLine(centerX, 0, centerX, height);
-        
+
         // 번개 효과 라인 (좌우 대각선)
         g2.setColor(new Color(255, 255, 0, 60)); // 노란색 번개
         g2.setStroke(new java.awt.BasicStroke(3));
@@ -606,13 +617,13 @@ public class BattleScreen implements Screen {
             int endX = width / 4 + rand.nextInt(width / 4);
             int y = rand.nextInt(height);
             g2.drawLine(startX, y, endX, y + 50);
-            
+
             startX = width - rand.nextInt(width / 4);
             endX = width - (width / 4 + rand.nextInt(width / 4));
             y = rand.nextInt(height);
             g2.drawLine(startX, y, endX, y + 50);
         }
-        
+
         // 폭발 파티클 효과 (배경에 흩어진 점들)
         g2.setColor(new Color(255, 150, 0, 150)); // 주황색 불꽃
         rand = new java.util.Random(42); // 고정 패턴
@@ -622,11 +633,11 @@ public class BattleScreen implements Screen {
             int size = rand.nextInt(4) + 2;
             g2.fillOval(x, y, size, size);
         }
-        
+
         // 붉은 섬광 (상단)
         g2.setColor(new Color(255, 0, 0, 30));
         g2.fillRect(0, 0, width, height / 4);
-        
+
         g2.setStroke(new java.awt.BasicStroke(1));
     }
 }
