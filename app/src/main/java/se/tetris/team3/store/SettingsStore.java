@@ -40,6 +40,7 @@ public class SettingsStore {
             p.setProperty("sizePreset", s.getSizePreset().name());
             p.setProperty("colorBlind", Boolean.toString(s.isColorBlindMode()));
             p.setProperty("gameMode", s.getGameMode().name());
+            p.setProperty("difficulty", s.getDifficulty().name());
 
             // 키맵 저장
             for (Map.Entry<Settings.Action, Integer> e : s.getKeymap().entrySet()) {
@@ -75,7 +76,14 @@ public class SettingsStore {
             try {
                 s.setGameMode(GameMode.valueOf(gm));
             } catch (IllegalArgumentException ignore) {}
-
+        
+            String diff = p.getProperty("difficulty", s.getDifficulty().name());
+            try {
+                s.setDifficulty(Settings.Difficulty.valueOf(diff));
+            } catch (IllegalArgumentException ignore) {
+                System.err.println("[SettingsStore] invalid difficulty value: " + diff);
+            }
+            
             // 키맵 복원
             for (Action a : Action.values()) {
                 String v = p.getProperty("key." + a.name());
