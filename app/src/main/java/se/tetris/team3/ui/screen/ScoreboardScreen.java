@@ -17,9 +17,7 @@ import se.tetris.team3.ui.AppFrame;
 // 스코어보드 화면
 // 현재 Settings의 GameMode를 읽어 모드별 상위 랭킹을 보여줌
 public class ScoreboardScreen implements Screen {
-    
-    private static final String SCORE_FORMAT_MESSAGE = "YOUR SCORE: %d points";
-    
+        
     private int idx = 0;
     private final List<MenuItem> items = new ArrayList<>();
     private final AppFrame app;

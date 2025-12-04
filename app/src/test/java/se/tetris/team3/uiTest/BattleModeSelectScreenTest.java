@@ -3,12 +3,10 @@ package se.tetris.team3.uiTest;
 import org.junit.jupiter.api.*;
 import static org.junit.jupiter.api.Assertions.*;
 import org.mockito.Mockito;
-import se.tetris.team3.core.GameMode;
 import se.tetris.team3.core.Settings;
 import se.tetris.team3.ui.AppFrame;
 import se.tetris.team3.ui.screen.BattleModeSelectScreen;
 import se.tetris.team3.ui.screen.BattleScreen;
-import se.tetris.team3.ui.screen.MenuScreen;
 
 import java.awt.*;
 import java.awt.event.KeyEvent;

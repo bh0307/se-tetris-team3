@@ -77,10 +77,6 @@ public class P2PBattleScreen implements Screen, P2PConnectionListener {
     private volatile int remoteNextItemRow, remoteNextItemCol;
 
     private volatile boolean[][] remoteGarbagePreview;
-
-    // diff 비교용 이전 필드
-    private int[][] prevRemoteField;
-
     // 상대 보드용 파티클
     private final List<Particle> remoteParticles =
             Collections.synchronizedList(new ArrayList<>());

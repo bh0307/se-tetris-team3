@@ -771,7 +771,6 @@ public class GameManager {
      * int, long, double 삽입 가능 */
     private int getScoreWithMultiplier(int base)    { return isDoubleScoreActive() ? base * 2 : base; }
     private int getScoreWithMultiplier(long base)   { int v = (int) base; return isDoubleScoreActive() ? v * 2 : v; }
-    private int getScoreWithMultiplier(double base) { int v = (int) Math.round(base); return isDoubleScoreActive() ? v * 2 : v; }
 
     public boolean isDoubleScoreActive() {
         if (doubleScoreActive && System.currentTimeMillis() > doubleScoreTime) {
